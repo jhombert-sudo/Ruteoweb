@@ -2,213 +2,70 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Despachos – Registro de Llegada</title>
+  <title>Despachos - Registro de Llegada</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- Fuente -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
-  <style>
-    * {
-      box-sizing: border-box;
-      font-family: 'Inter', sans-serif;
-    }
-
-    body {
-      margin: 0;
-      background: linear-gradient(180deg, #1e3a5f 0%, #f2f4f8 45%);
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      padding: 40px 16px;
-    }
-
-    .card {
-      background: #fff;
-      width: 100%;
-      max-width: 520px;
-      border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-      padding: 32px;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 24px;
-    }
-
-    .logo span {
-      font-size: 22px;
-      font-weight: 700;
-      color: #1e3a5f;
-    }
-
-    h1 {
-      font-size: 24px;
-      margin: 0;
-      color: #1e3a5f;
-    }
-
-    .subtitle {
-      margin-top: 8px;
-      color: #6b7280;
-      font-size: 15px;
-    }
-
-    hr {
-      margin: 24px 0;
-      border: none;
-      border-top: 1px solid #e5e7eb;
-    }
-
-    .btn {
-      width: 100%;
-      padding: 14px;
-      background: linear-gradient(180deg, #ffb703, #f59e0b);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 6px 15px rgba(245, 158, 11, 0.4);
-    }
-
-    .btn:disabled {
-      background: #d1d5db;
-      box-shadow: none;
-      cursor: not-allowed;
-    }
-
-    .section-title {
-      font-weight: 600;
-      color: #1f2937;
-      margin-bottom: 8px;
-    }
-
-    .info {
-      background: #f9fafb;
-      border-radius: 8px;
-      padding: 12px;
-      font-size: 14px;
-      color: #374151;
-    }
-
-    .status {
-      margin-top: 16px;
-      font-size: 14px;
-      color: #6b7280;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .spinner {
-      width: 18px;
-      height: 18px;
-      border: 3px solid #e5e7eb;
-      border-top: 3px solid #f59e0b;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-  </style>
+  <!-- CSS -->
+  <link rel="stylesheet" href="../assets/css/main.css">
 </head>
+
 <body>
 
-  <div class="card">
+  <!-- HEADER -->
+  <header class="topbar">
+    <div class="logo">🚚 Despachos</div>
+  </header>
 
-    <!-- Header -->
-    <div class="logo">
-      🚚 <span>Despachos</span>
-    </div>
+  <!-- CONTENEDOR -->
+  <main class="container">
 
-    <h1 id="welcome">Bienvenido</h1>
-    <div class="subtitle">
-      Toca el botón para registrar tu llegada al centro de despacho.
-    </div>
+    <!-- CARD -->
+    <section class="card">
 
-    <hr>
+      <h1>Bienvenido, <span id="nombreChofer">Fernando</span></h1>
+      <p class="subtitle">
+        Tocá el botón para registrar tu llegada al centro de despacho.
+      </p>
 
-    <!-- Acción principal -->
-    <button id="btnCheckin" class="btn">
-      Registrar Llegada
-    </button>
+      <button id="btnLlegada" class="btn-primary">
+        Registrar llegada
+      </button>
 
-    <div id="status" class="status" style="display:none;">
-      <div class="spinner"></div>
-      <span>Esperando confirmación de llegada…</span>
-    </div>
+      <div id="estado" class="estado oculto">
+        ⏳ Esperando confirmación de llegada...
+      </div>
 
-    <hr>
+      <hr />
 
-    <!-- Ubicación -->
-    <div class="section-title">📍 Ubicación</div>
-    <div class="info" id="locationInfo">
-      Centro de Despacho Central – Distrito 2150, Buenos Aires.
-    </div>
+      <!-- QR -->
+      <div class="qr-section">
+        <h3>Código QR</h3>
+        <p id="nombreQR">Fernando Colmenares</p>
 
-  </div>
+        <button class="btn-secondary">
+          Generar QR
+        </button>
 
-  <script>
-    /*****************************************
-     * SIMULACIÓN DE IDENTIDAD DEL CHOFER
-     *****************************************/
-    const DRIVER_KEY = 'driver_uid';
-    const DRIVER_NAME_KEY = 'driver_name';
+        <div class="qr-placeholder">
+          [ QR acá ]
+        </div>
+      </div>
 
-    function initDriver() {
-      let uid = localStorage.getItem(DRIVER_KEY);
-      let name = localStorage.getItem(DRIVER_NAME_KEY);
+      <hr />
 
-      if (!uid) {
-        uid = 'drv_' + crypto.randomUUID();
-        name = prompt('Ingresá tu nombre completo');
-        localStorage.setItem(DRIVER_KEY, uid);
-        localStorage.setItem(DRIVER_NAME_KEY, name);
-      }
+      <!-- UBICACION -->
+      <div class="ubicacion">
+        📍 Centro de Despacho Central Distrito 2150, Buenos Aires.
+      </div>
 
-      document.getElementById('welcome').innerText = `Bienvenido, ${name}`;
-    }
+    </section>
 
-    /*****************************************
-     * REGISTRO DE LLEGADA (SIN FIREBASE AÚN)
-     *****************************************/
-    function registrarLlegada() {
-      const btn = document.getElementById('btnCheckin');
-      const status = document.getElementById('status');
+  </main>
 
-      btn.disabled = true;
-      status.style.display = 'flex';
-
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          console.log('Ubicación OK:', pos.coords.latitude, pos.coords.longitude);
-
-          setTimeout(() => {
-            status.innerHTML = '✅ Tu llegada fue registrada correctamente';
-          }, 1500);
-        },
-        () => {
-          alert('No se pudo obtener la ubicación');
-          btn.disabled = false;
-          status.style.display = 'none';
-        },
-        { enableHighAccuracy: true }
-      );
-    }
-
-    document.getElementById('btnCheckin')
-      .addEventListener('click', registrarLlegada);
-
-    initDriver();
-  </script>
-
+  <!-- JS -->
+  <script src="../assets/js/app.js"></script>
 </body>
 </html>
