@@ -1,1 +1,78 @@
-// main.css
+* {
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #1e3a5f 0%, #f2f4f8 45%);
+}
+
+.topbar {
+  height: 60px;
+  background: #1e3a5f;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  font-weight: 700;
+}
+
+.container {
+  display: flex;
+  justify-content: center;
+  padding: 40px 16px;
+}
+
+.card {
+  background: #fff;
+  width: 100%;
+  max-width: 420px;
+  border-radius: 12px;
+  padding: 32px 24px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.15);
+  text-align: center;
+}
+
+.card h1 {
+  margin: 0;
+  font-size: 26px;
+}
+
+.subtitle {
+  margin: 12px 0 24px;
+  color: #555;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: #f59e0b;
+  color: #fff;
+  font-weight: 700;
+}
+
+.btn-primary:hover {
+  background: #e08b07;
+}
+
+.estado {
+  margin-top: 20px;
+  font-size: 14px;
+  color: #444;
+}
+
+.oculto {
+  display: none;
+}
+
+.ubicacion {
+  margin-top: 30px;
+  font-size: 13px;
+  color: #777;
+}
