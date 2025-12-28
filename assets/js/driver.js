@@ -1,4 +1,18 @@
 /*************************************************
+ * CONTROL DE VISTA (CHOFER vs PANEL)
+ *************************************************/
+const params = new URLSearchParams(window.location.search);
+const esPanel = params.get("panel") === "1";
+
+// Si estamos en modo PANEL → no ejecutamos fichaje
+if (esPanel) {
+  const fichajeWrapper = document.querySelector(".wrapper");
+  if (fichajeWrapper) fichajeWrapper.style.display = "none";
+  console.log("Modo panel: driver.js desactivado");
+  throw new Error("Driver desactivado en modo panel");
+}
+
+/*************************************************
  * FIREBASE – SOLO INICIALIZACIÓN (LECTURA FUTURA)
  *************************************************/
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -14,7 +28,7 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app); // 👉 preparado para el panel (lectura)
+const db = getFirestore(app); // preparado para lecturas futuras
 
 /*************************************************
  * ELEMENTOS UI
@@ -35,7 +49,6 @@ welcome.innerText = `Bienvenido, ${nombreChofer}`;
 btnFichar.addEventListener("click", async () => {
   loader.classList.remove("hidden");
 
-  // Validamos que no usen otro nombre en el mismo celular
   const identidadOk = validarIdentidadDispositivo(nombreChofer);
   if (!identidadOk) {
     loader.classList.add("hidden");
@@ -43,18 +56,15 @@ btnFichar.addEventListener("click", async () => {
   }
 
   registrarLlegada();
-
   loader.classList.add("hidden");
 });
 
 /*************************************************
- * REGISTRO DE LLEGADA (SOLO WEB / PANEL)
+ * REGISTRO DE LLEGADA (SOLO WEB)
  *************************************************/
 function registrarLlegada() {
   const ahora = new Date();
 
-  // Esto NO va a Firestore
-  // Vive solo en la web / panel
   console.log("LLEGADA REGISTRADA (WEB)", {
     chofer: nombreChofer,
     hora: ahora.toISOString(),
@@ -62,13 +72,6 @@ function registrarLlegada() {
   });
 
   alert("Llegada registrada correctamente ✅");
-
-  /*
-    👉 El PANEL (otro JS):
-    - consulta Firestore
-    - si existe despacho HOY → muestra DESPACHADO
-    - si no → queda PENDIENTE
-  */
 }
 
 /*************************************************
