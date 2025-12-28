@@ -3,29 +3,46 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Registro de llegada</title>
+  <title>Despachos - Registro</title>
 
   <link rel="stylesheet" href="assets/css/main.css">
 </head>
 <body>
 
-  <div class="container">
-    <h1>🚚 Registro de llegada</h1>
+  <!-- HEADER -->
+  <header class="topbar">
+    <div class="logo">🚚 Despachos</div>
+    <div class="icons">🔔 ✉️ ⚙️</div>
+  </header>
 
-    <p id="status" class="status">
-      Presioná el botón para registrar tu llegada
-    </p>
+  <!-- CARD -->
+  <main class="wrapper">
+    <div class="card">
 
-    <button id="btnFichar">
-      Registrar llegada
-    </button>
+      <h1 id="welcome">Bienvenido</h1>
+      <p class="subtitle">
+        Toca el botón para registrar tu llegada al centro de despacho.
+      </p>
 
-    <div id="info" class="info hidden">
-      <p><strong>Chofer:</strong> <span id="driverName"></span></p>
-      <p><strong>Hora:</strong> <span id="arrivalTime"></span></p>
-      <p><strong>Estado:</strong> Pendiente</p>
+      <button id="btnFichar" class="primary-btn">
+        Registrar llegada
+      </button>
+
+      <div id="loader" class="loader hidden">
+        ⏳ Esperando confirmación de llegada...
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="section">
+        <h3>Ubicación</h3>
+        <p>
+          Centro de Despacho Central Distrito 2150, Buenos Aires.
+        </p>
+      </div>
+
     </div>
-  </div>
+  </main>
 
   <script src="assets/js/driver.js"></script>
 </body>
