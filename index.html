@@ -1,1 +1,32 @@
-index.html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Registro de llegada</title>
+
+  <link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body>
+
+  <div class="container">
+    <h1>🚚 Registro de llegada</h1>
+
+    <p id="status" class="status">
+      Presioná el botón para registrar tu llegada
+    </p>
+
+    <button id="btnFichar">
+      Registrar llegada
+    </button>
+
+    <div id="info" class="info hidden">
+      <p><strong>Chofer:</strong> <span id="driverName"></span></p>
+      <p><strong>Hora:</strong> <span id="arrivalTime"></span></p>
+      <p><strong>Estado:</strong> Pendiente</p>
+    </div>
+  </div>
+
+  <script src="assets/js/driver.js"></script>
+</body>
+</html>
