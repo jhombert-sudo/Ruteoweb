@@ -15,7 +15,7 @@ const fichajeWrapper = document.querySelector(".wrapper");
 if (fichajeWrapper) fichajeWrapper.style.display = "none";
 
 /*************************************************
- * FIREBASE – SOLO LECTURA (PANEL)
+ * FIREBASE – LECTURA (PANEL)
  *************************************************/
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
@@ -59,26 +59,31 @@ function formatearTiempo(ms) {
 }
 
 /*************************************************
- * FICHAJES (FUENTE A – WEB)
+ * ESTADO GLOBAL
  *************************************************/
-function obtenerFichajes() {
-  const raw = localStorage.getItem("fichajes_hoy");
-  if (!raw) return [];
-  try {
-    const data = JSON.parse(raw);
-    return Array.isArray(data) ? data : [data];
-  } catch {
-    return [];
-  }
-}
-
-/*************************************************
- * DESPACHOS (FUENTE B – FIRESTORE)
- *************************************************/
+let fichajesHoy = [];
 let despachosHoy = [];
 
-const colRef = collection(db, "despachos_diarios");
-onSnapshot(colRef, (snapshot) => {
+/*************************************************
+ * ESCUCHAR FICHAJES (FUENTE A)
+ *************************************************/
+const fichajesRef = collection(db, "fichajes_hoy");
+onSnapshot(fichajesRef, (snapshot) => {
+  const hoy = hoyISO();
+  fichajesHoy = [];
+
+  snapshot.forEach((doc) => {
+    if (doc.id.startsWith(hoy + "_")) {
+      fichajesHoy.push(doc.data());
+    }
+  });
+});
+
+/*************************************************
+ * ESCUCHAR DESPACHOS (FUENTE B)
+ *************************************************/
+const despachosRef = collection(db, "despachos_diarios");
+onSnapshot(despachosRef, (snapshot) => {
   const hoy = hoyISO();
   despachosHoy = [];
 
@@ -90,37 +95,47 @@ onSnapshot(colRef, (snapshot) => {
 });
 
 /*************************************************
- * RENDER (SE ACTUALIZA EN VIVO)
+ * RENDER PRINCIPAL
  *************************************************/
 function render() {
-  const fichajes = obtenerFichajes();
-
   listaPendientes.innerHTML = "";
   listaDespachados.innerHTML = "";
 
   let pendientes = 0;
   let despachados = 0;
 
-  fichajes.forEach((f) => {
+  fichajesHoy.forEach((f) => {
     const despacho = despachosHoy.find(d => d.chofer === f.chofer);
     const llegada = new Date(f.horaLlegada);
-    const ahora = new Date();
-    const tiempo = formatearTiempo(ahora - llegada);
 
     if (despacho) {
       // 🟢 DESPACHADO
       despachados++;
+
+      const horaDespacho = despacho.updatedAt
+        ? new Date(despacho.updatedAt).toLocaleTimeString()
+        : "-";
+
+      const duracionMs = despacho.updatedAt
+        ? new Date(despacho.updatedAt) - llegada
+        : 0;
+
       const li = document.createElement("li");
       li.innerHTML = `
         <strong>${f.chofer}</strong><br>
-        ⏱ ${tiempo}<br>
-        Paquetes: ${despacho.cantidad_comprobantes}<br>
-        Localidades: ${Array.isArray(despacho.localidades) ? despacho.localidades.join(", ") : "-"}
+        ⏱ ${formatearTiempo(duracionMs)}<br>
+        🕒 Despacho: ${horaDespacho}<br>
+        📦 Paquetes: ${despacho.cantidad_comprobantes}<br>
+        📍 ${Array.isArray(despacho.localidades) ? despacho.localidades.join(", ") : "-"}
       `;
       listaDespachados.appendChild(li);
+
     } else {
       // 🟡 PENDIENTE
       pendientes++;
+      const ahora = new Date();
+      const tiempo = formatearTiempo(ahora - llegada);
+
       const li = document.createElement("li");
       li.innerHTML = `
         <strong>${f.chofer}</strong><br>
@@ -139,16 +154,3 @@ function render() {
  * ACTUALIZACIÓN EN VIVO
  *************************************************/
 setInterval(render, 1000);
-
-/*************************************************
- * BOTÓN RESET (SOLO TESTING)
- *************************************************/
-const resetBtn = document.createElement("button");
-resetBtn.textContent = "🧪 Reset testing";
-resetBtn.style.marginTop = "20px";
-resetBtn.onclick = () => {
-  localStorage.removeItem("fichajes_hoy");
-  localStorage.removeItem("driverName");
-  location.reload();
-};
-panelSection.appendChild(resetBtn);
