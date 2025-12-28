@@ -13,7 +13,7 @@ if (esPanel) {
 }
 
 /*************************************************
- * FIREBASE – SOLO INICIALIZACIÓN (LECTURA FUTURA)
+ * FIREBASE – SOLO INICIALIZACIÓN (NO SE USA AÚN)
  *************************************************/
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -27,8 +27,8 @@ const firebaseConfig = {
   appId: "1:741190942056:web:406de14d0ac4fb617caadd"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app); // preparado para lecturas futuras
+initializeApp(firebaseConfig);
+getFirestore(); // preparado para futuro (NO escribe)
 
 /*************************************************
  * ELEMENTOS UI
@@ -46,7 +46,7 @@ welcome.innerText = `Bienvenido, ${nombreChofer}`;
 /*************************************************
  * EVENTO BOTÓN FICHAR
  *************************************************/
-btnFichar.addEventListener("click", async () => {
+btnFichar.addEventListener("click", () => {
   loader.classList.remove("hidden");
 
   const identidadOk = validarIdentidadDispositivo(nombreChofer);
@@ -60,14 +60,36 @@ btnFichar.addEventListener("click", async () => {
 });
 
 /*************************************************
- * REGISTRO DE LLEGADA (SOLO WEB)
+ * REGISTRO DE LLEGADA (FUENTE A – WEB)
+ * 👉 ESTO ES LO QUE LEE EL PANEL
  *************************************************/
 function registrarLlegada() {
-  const ahora = new Date();
+  const ahora = new Date().toISOString();
+
+  // Traemos fichajes existentes del día
+  let fichajes = [];
+  const raw = localStorage.getItem("fichajes_hoy");
+
+  if (raw) {
+    try {
+      fichajes = JSON.parse(raw);
+      if (!Array.isArray(fichajes)) fichajes = [];
+    } catch {
+      fichajes = [];
+    }
+  }
+
+  // Agregamos nuevo fichaje
+  fichajes.push({
+    chofer: nombreChofer,
+    horaLlegada: ahora
+  });
+
+  localStorage.setItem("fichajes_hoy", JSON.stringify(fichajes));
 
   console.log("LLEGADA REGISTRADA (WEB)", {
     chofer: nombreChofer,
-    hora: ahora.toISOString(),
+    hora: ahora,
     estado: "pendiente"
   });
 
