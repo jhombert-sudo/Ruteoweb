@@ -1,4 +1,25 @@
 /*************************************************
+ * CONTROL DE VISTA (PANEL SOLO ADMIN)
+ *************************************************/
+const params = new URLSearchParams(window.location.search);
+const esPanel = params.get("panel") === "1";
+
+const panelSection = document.getElementById("panel");
+
+// Si no es vista panel → ocultamos y salimos
+if (!esPanel) {
+  if (panelSection) panelSection.style.display = "none";
+  console.log("Vista chofer: panel desactivado");
+  throw new Error("Panel deshabilitado para chofer");
+}
+
+// Si es panel → ocultamos la vista de fichaje
+const fichajeWrapper = document.querySelector(".wrapper");
+if (fichajeWrapper) {
+  fichajeWrapper.style.display = "none";
+}
+
+/*************************************************
  * FIREBASE – SOLO LECTURA (PANEL)
  *************************************************/
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -39,18 +60,18 @@ function hoyISO() {
 
 /*************************************************
  * ESTADO WEB (PENDIENTES)
- * 👉 Esto vive solo en memoria del navegador
+ * 👉 SOLO PARA SIMULAR LLEGADAS EN EL PANEL
  *************************************************/
 const pendientesWeb = new Set();
 
 /*
-  NOTA IMPORTANTE:
-  - driver.js registra llegada en la web
-  - acá simulamos pendientes leyendo localStorage
-  - luego el despacho desde Firestore los mueve a despachados
+  IMPORTANTE:
+  - El fichaje real vive en la web del chofer
+  - El panel NO ficha
+  - Esto solo representa “pendientes visibles”
 */
 
-// Detectamos al chofer del dispositivo actual (si existe)
+// Si el admin quiere simular pendientes locales (opcional)
 const choferLocal = localStorage.getItem("driverName");
 if (choferLocal) {
   pendientesWeb.add(choferLocal);
@@ -87,14 +108,14 @@ function renderPanel(despachadosHoy) {
   // === DESPACHADOS ===
   despachadosHoy.forEach((d) => {
 
-    // Sacamos de pendientes si ya fue despachado
+    // Si estaba pendiente en web, lo quitamos
     pendientesWeb.delete(d.chofer);
 
     const li = document.createElement("li");
     li.innerHTML = `
       <strong>${d.chofer}</strong><br>
       Paquetes: ${d.cantidad_comprobantes}<br>
-      Localidades: ${d.localidades.join(", ")}
+      Localidades: ${Array.isArray(d.localidades) ? d.localidades.join(", ") : "-"}
     `;
     listaDespachados.appendChild(li);
   });
