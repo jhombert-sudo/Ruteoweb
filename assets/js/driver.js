@@ -1,24 +1,27 @@
 const btnFichar = document.getElementById("btnFichar");
-const statusEl = document.getElementById("status");
-const infoEl = document.getElementById("info");
+const loader = document.getElementById("loader");
+const welcome = document.getElementById("welcome");
 
-const driverNameEl = document.getElementById("driverName");
-const arrivalTimeEl = document.getElementById("arrivalTime");
-
-// CONFIGURACIÓN
-const CENTRO_LAT = -34.6037;   // ejemplo
-const CENTRO_LNG = -58.3816;   // ejemplo
+// CONFIGURACIÓN DEL CENTRO
+const CENTRO_LAT = -34.6037;   // AJUSTAR
+const CENTRO_LNG = -58.3816;   // AJUSTAR
 const RADIO_METROS = 300;
 
-// BOTÓN
+// IDENTIDAD DEL CHOFER
+const nombreChofer = obtenerNombreChofer();
+welcome.innerText = `Bienvenido, ${nombreChofer}`;
+
+// EVENTO BOTÓN
 btnFichar.addEventListener("click", () => {
-  statusEl.innerText = "Obteniendo ubicación...";
+  loader.classList.remove("hidden");
   obtenerUbicacion();
 });
 
+// GEOLOCALIZACIÓN
 function obtenerUbicacion() {
   if (!navigator.geolocation) {
-    statusEl.innerText = "Tu celular no soporta geolocalización";
+    alert("Tu dispositivo no soporta geolocalización");
+    loader.classList.add("hidden");
     return;
   }
 
@@ -33,10 +36,16 @@ function onSuccess(position) {
   const lat = position.coords.latitude;
   const lng = position.coords.longitude;
 
-  const distancia = calcularDistancia(lat, lng, CENTRO_LAT, CENTRO_LNG);
+  const distancia = calcularDistancia(
+    lat,
+    lng,
+    CENTRO_LAT,
+    CENTRO_LNG
+  );
 
   if (distancia > RADIO_METROS) {
-    statusEl.innerText = "No estás en el punto de fichaje";
+    alert("No estás en el punto de fichaje");
+    loader.classList.add("hidden");
     return;
   }
 
@@ -44,27 +53,25 @@ function onSuccess(position) {
 }
 
 function onError() {
-  statusEl.innerText = "No se pudo obtener la ubicación";
+  alert("No se pudo obtener la ubicación");
+  loader.classList.add("hidden");
 }
 
+// REGISTRO (SIMULADO)
 function registrarLlegada() {
-  const nombre = obtenerNombreChofer();
   const ahora = new Date();
 
-  driverNameEl.innerText = nombre;
-  arrivalTimeEl.innerText = ahora.toLocaleTimeString();
-
-  infoEl.classList.remove("hidden");
-  statusEl.innerText = "Llegada registrada correctamente";
-
-  console.log("Registro:", {
-    chofer: nombre,
+  console.log("LLEGADA REGISTRADA", {
+    chofer: nombreChofer,
     hora: ahora.toISOString(),
     estado: "pendiente"
   });
+
+  alert("Llegada registrada correctamente ✅");
+  loader.classList.add("hidden");
 }
 
-// SIMULACIÓN DE IDENTIDAD (luego Firebase)
+// IDENTIDAD POR DISPOSITIVO
 function obtenerNombreChofer() {
   let nombre = localStorage.getItem("driverName");
 
@@ -76,7 +83,7 @@ function obtenerNombreChofer() {
   return nombre;
 }
 
-// DISTANCIA HAVERSINE
+// CÁLCULO DE DISTANCIA (HAVERSINE)
 function calcularDistancia(lat1, lon1, lat2, lon2) {
   const R = 6371000;
   const toRad = x => x * Math.PI / 180;
@@ -87,11 +94,10 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
   return R * c;
 }
