@@ -4,31 +4,32 @@
 const params = new URLSearchParams(window.location.search);
 const esPanel = params.get("panel") === "1";
 
-// Si estamos en modo PANEL → no ejecutamos fichaje
 if (esPanel) {
   const fichajeWrapper = document.querySelector(".wrapper");
   if (fichajeWrapper) fichajeWrapper.style.display = "none";
-  console.log("Modo panel: driver.js desactivado");
   throw new Error("Driver desactivado en modo panel");
 }
 
 /*************************************************
- * FIREBASE – SOLO INICIALIZACIÓN (NO SE USA AÚN)
+ * FIREBASE – INICIALIZACIÓN
  *************************************************/
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBeLJRUfYACdMtLuKbgcFKgg0TBHUxNnzA",
   authDomain: "despachos-realtime.firebaseapp.com",
-  projectId: "despachos-realtime",
-  storageBucket: "despachos-realtime.appspot.com",
-  messagingSenderId: "741190942056",
-  appId: "1:741190942056:web:406de14d0ac4fb617caadd"
+  projectId: "despachos-realtime"
 };
 
-initializeApp(firebaseConfig);
-getFirestore(); // preparado para futuro (NO escribe)
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 /*************************************************
  * ELEMENTOS UI
@@ -46,7 +47,7 @@ welcome.innerText = `Bienvenido, ${nombreChofer}`;
 /*************************************************
  * EVENTO BOTÓN FICHAR
  *************************************************/
-btnFichar.addEventListener("click", () => {
+btnFichar.addEventListener("click", async () => {
   loader.classList.remove("hidden");
 
   const identidadOk = validarIdentidadDispositivo(nombreChofer);
@@ -55,45 +56,68 @@ btnFichar.addEventListener("click", () => {
     return;
   }
 
-  registrarLlegada();
+  await registrarLlegadaFirestore();
   loader.classList.add("hidden");
 });
 
 /*************************************************
- * REGISTRO DE LLEGADA (FUENTE A – WEB)
- * 👉 ESTO ES LO QUE LEE EL PANEL
+ * REGISTRO DE LLEGADA EN FIRESTORE
  *************************************************/
-function registrarLlegada() {
-  const ahora = new Date().toISOString();
+async function registrarLlegadaFirestore() {
+  const hoy = new Date().toISOString().substring(0, 10);
+  const docId = `${hoy}_${nombreChofer.toUpperCase()}`;
 
-  // Traemos fichajes existentes del día
-  let fichajes = [];
-  const raw = localStorage.getItem("fichajes_hoy");
+  const ref = doc(db, "fichajes_hoy", docId);
+  const snap = await getDoc(ref);
 
-  if (raw) {
-    try {
-      fichajes = JSON.parse(raw);
-      if (!Array.isArray(fichajes)) fichajes = [];
-    } catch {
-      fichajes = [];
-    }
+  // ❌ Ya fichó hoy
+  if (snap.exists()) {
+    alert("⚠️ Ya estás registrado hoy.");
+    mostrarQR(nombreChofer);
+    return;
   }
 
-  // Agregamos nuevo fichaje
-  fichajes.push({
+  // ✅ Crear fichaje
+  await setDoc(ref, {
     chofer: nombreChofer,
-    horaLlegada: ahora
-  });
-
-  localStorage.setItem("fichajes_hoy", JSON.stringify(fichajes));
-
-  console.log("LLEGADA REGISTRADA (WEB)", {
-    chofer: nombreChofer,
-    hora: ahora,
-    estado: "pendiente"
+    fecha: hoy,
+    horaLlegada: new Date().toISOString(),
+    estado: "pendiente",
+    createdAt: serverTimestamp()
   });
 
   alert("Llegada registrada correctamente ✅");
+  mostrarQR(nombreChofer);
+}
+
+/*************************************************
+ * QR TEMPORAL (2 HORAS)
+ *************************************************/
+function mostrarQR(nombre) {
+  let contenedor = document.getElementById("qr-container");
+
+  if (!contenedor) {
+    contenedor = document.createElement("div");
+    contenedor.id = "qr-container";
+    contenedor.style.marginTop = "20px";
+    contenedor.style.textAlign = "center";
+    document.querySelector(".card").appendChild(contenedor);
+  }
+
+  contenedor.innerHTML = `
+    <p><strong>Mostrá este QR al despachar</strong></p>
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+      nombre + "|" + Date.now()
+    )}" />
+    <p style="font-size:12px;color:#666">
+      QR válido por 2 horas
+    </p>
+  `;
+
+  // Expira a las 2 horas
+  setTimeout(() => {
+    contenedor.remove();
+  }, 2 * 60 * 60 * 1000);
 }
 
 /*************************************************
