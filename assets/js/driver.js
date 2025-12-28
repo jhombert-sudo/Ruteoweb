@@ -83,8 +83,17 @@ function obtenerNombreChofer() {
   return nombre;
 }
 
-/* AUTENTICACIÓN BIOMÉTRICA REAL (FACE ID / HUELLA / PIN) */
+/* AUTENTICACIÓN BIOMÉTRICA
+   👉 SOLO EN CELULARES
+   👉 EN PC NO HACE NADA
+*/
 async function autenticarDispositivo() {
+  // Desktop / PC: NO autenticamos
+  if (!esCelular()) {
+    return true;
+  }
+
+  // Navegador sin soporte
   if (!window.PublicKeyCredential) {
     return true;
   }
@@ -102,6 +111,11 @@ async function autenticarDispositivo() {
     alert("Autenticación cancelada");
     return false;
   }
+}
+
+/* DETECCIÓN DE CELULAR */
+function esCelular() {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
 /* DISTANCIA (PARA CUANDO ACTIVEMOS GEO) */
