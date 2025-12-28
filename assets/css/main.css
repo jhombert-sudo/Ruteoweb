@@ -23,9 +23,11 @@ body {
   font-size: 18px;
 }
 
+/* ÍCONOS DESHABILITADOS (POR AHORA) */
 .icons {
   font-size: 18px;
-  opacity: 0.9;
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 /* LAYOUT */
@@ -102,4 +104,15 @@ h1 {
 
 .hidden {
   display: none;
+}
+
+/* FIX DESKTOP (MENOS “VACÍO”) */
+@media (min-width: 1024px) {
+  .wrapper {
+    padding-top: 80px;
+  }
+
+  .card {
+    max-width: 480px;
+  }
 }
