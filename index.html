@@ -5,23 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Despachos - Registro</title>
 
+  <!-- ESTILOS -->
   <link rel="stylesheet" href="assets/css/main.css">
 </head>
+
 <body>
 
-  <!-- HEADER -->
+  <!-- ================= HEADER ================= -->
   <header class="topbar">
     <div class="logo">🚚 Despachos</div>
     <div class="icons">🔔 ✉️ ⚙️</div>
   </header>
 
-  <!-- CARD -->
+  <!-- ================= FICHAJE CHOFER ================= -->
   <main class="wrapper">
     <div class="card">
 
       <h1 id="welcome">Bienvenido</h1>
+
       <p class="subtitle">
-        Toca el botón para registrar tu llegada al centro de despacho.
+        Tocá el botón para registrar tu llegada al centro de despacho.
       </p>
 
       <button id="btnFichar" class="primary-btn">
@@ -44,6 +47,54 @@
     </div>
   </main>
 
-  <script src="assets/js/driver.js"></script>
+  <!-- ================= PANEL OPERATIVO ================= -->
+  <section id="panel" class="panel-wrapper">
+
+    <h2 class="panel-title">Panel del día</h2>
+
+    <!-- RESUMEN -->
+    <div class="panel-resumen">
+      <div class="resumen-item">
+        <span class="resumen-label">Choferes activos</span>
+        <span id="total-activos" class="resumen-value">0</span>
+      </div>
+
+      <div class="resumen-item">
+        <span class="resumen-label">Pendientes</span>
+        <span id="total-pendientes" class="resumen-value">0</span>
+      </div>
+
+      <div class="resumen-item">
+        <span class="resumen-label">Despachados</span>
+        <span id="total-despachados" class="resumen-value">0</span>
+      </div>
+    </div>
+
+    <!-- LISTAS -->
+    <div class="panel-tablas">
+
+      <!-- PENDIENTES -->
+      <div class="panel-col">
+        <h3>🟡 Pendientes</h3>
+        <ul id="lista-pendientes" class="lista"></ul>
+      </div>
+
+      <!-- DESPACHADOS -->
+      <div class="panel-col">
+        <h3>🟢 Despachados</h3>
+        <ul id="lista-despachados" class="lista"></ul>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- ================= SCRIPTS ================= -->
+  <!-- DRIVER: identidad + fichaje -->
+  <script type="module" src="assets/js/driver.js"></script>
+
+  <!-- PANEL: lectura Firestore + estados -->
+  <script type="module" src="assets/js/panel.js"></script>
+
 </body>
 </html>
