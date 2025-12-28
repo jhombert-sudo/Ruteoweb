@@ -5,19 +5,14 @@ const params = new URLSearchParams(window.location.search);
 const esPanel = params.get("panel") === "1";
 
 const panelSection = document.getElementById("panel");
-
-// Si no es vista panel → ocultamos y salimos
 if (!esPanel) {
   if (panelSection) panelSection.style.display = "none";
-  console.log("Vista chofer: panel desactivado");
-  throw new Error("Panel deshabilitado para chofer");
+  throw new Error("Vista chofer: panel deshabilitado");
 }
 
-// Si es panel → ocultamos la vista de fichaje
+// Ocultamos la vista de fichaje
 const fichajeWrapper = document.querySelector(".wrapper");
-if (fichajeWrapper) {
-  fichajeWrapper.style.display = "none";
-}
+if (fichajeWrapper) fichajeWrapper.style.display = "none";
 
 /*************************************************
  * FIREBASE – SOLO LECTURA (PANEL)
@@ -32,10 +27,7 @@ import {
 const firebaseConfig = {
   apiKey: "AIzaSyBeLJRUfYACdMtLuKbgcFKgg0TBHUxNnzA",
   authDomain: "despachos-realtime.firebaseapp.com",
-  projectId: "despachos-realtime",
-  storageBucket: "despachos-realtime.appspot.com",
-  messagingSenderId: "741190942056",
-  appId: "1:741190942056:web:406de14d0ac4fb617caadd"
+  projectId: "despachos-realtime"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -55,84 +47,108 @@ const totalDespachados = document.getElementById("total-despachados");
  * UTILIDADES
  *************************************************/
 function hoyISO() {
-  return new Date().toISOString().substring(0, 10); // YYYY-MM-DD
+  return new Date().toISOString().substring(0, 10);
+}
+
+function formatearTiempo(ms) {
+  const s = Math.floor(ms / 1000);
+  const h = String(Math.floor(s / 3600)).padStart(2, "0");
+  const m = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const sec = String(s % 60).padStart(2, "0");
+  return `${h}:${m}:${sec}`;
 }
 
 /*************************************************
- * ESTADO WEB (PENDIENTES)
- * 👉 SOLO PARA SIMULAR LLEGADAS EN EL PANEL
+ * FICHAJES (FUENTE A – WEB)
  *************************************************/
-const pendientesWeb = new Set();
-
-/*
-  IMPORTANTE:
-  - El fichaje real vive en la web del chofer
-  - El panel NO ficha
-  - Esto solo representa “pendientes visibles”
-*/
-
-// Si el admin quiere simular pendientes locales (opcional)
-const choferLocal = localStorage.getItem("driverName");
-if (choferLocal) {
-  pendientesWeb.add(choferLocal);
+function obtenerFichajes() {
+  const raw = localStorage.getItem("fichajes_hoy");
+  if (!raw) return [];
+  try {
+    const data = JSON.parse(raw);
+    return Array.isArray(data) ? data : [data];
+  } catch {
+    return [];
+  }
 }
 
 /*************************************************
- * ESCUCHAR FIRESTORE (DESPACHADOS HOY)
+ * DESPACHOS (FUENTE B – FIRESTORE)
  *************************************************/
+let despachosHoy = [];
+
 const colRef = collection(db, "despachos_diarios");
-
 onSnapshot(colRef, (snapshot) => {
-
   const hoy = hoyISO();
-  const despachadosHoy = [];
+  despachosHoy = [];
 
   snapshot.forEach((doc) => {
     if (doc.id.startsWith(hoy + "_")) {
-      despachadosHoy.push(doc.data());
+      despachosHoy.push(doc.data());
     }
   });
-
-  renderPanel(despachadosHoy);
 });
 
 /*************************************************
- * RENDER PANEL
+ * RENDER (SE ACTUALIZA EN VIVO)
  *************************************************/
-function renderPanel(despachadosHoy) {
+function render() {
+  const fichajes = obtenerFichajes();
 
-  // Limpiar listas
   listaPendientes.innerHTML = "";
   listaDespachados.innerHTML = "";
 
-  // === DESPACHADOS ===
-  despachadosHoy.forEach((d) => {
+  let pendientes = 0;
+  let despachados = 0;
 
-    // Si estaba pendiente en web, lo quitamos
-    pendientesWeb.delete(d.chofer);
+  fichajes.forEach((f) => {
+    const despacho = despachosHoy.find(d => d.chofer === f.chofer);
+    const llegada = new Date(f.horaLlegada);
+    const ahora = new Date();
+    const tiempo = formatearTiempo(ahora - llegada);
 
-    const li = document.createElement("li");
-    li.innerHTML = `
-      <strong>${d.chofer}</strong><br>
-      Paquetes: ${d.cantidad_comprobantes}<br>
-      Localidades: ${Array.isArray(d.localidades) ? d.localidades.join(", ") : "-"}
-    `;
-    listaDespachados.appendChild(li);
+    if (despacho) {
+      // 🟢 DESPACHADO
+      despachados++;
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <strong>${f.chofer}</strong><br>
+        ⏱ ${tiempo}<br>
+        Paquetes: ${despacho.cantidad_comprobantes}<br>
+        Localidades: ${Array.isArray(despacho.localidades) ? despacho.localidades.join(", ") : "-"}
+      `;
+      listaDespachados.appendChild(li);
+    } else {
+      // 🟡 PENDIENTE
+      pendientes++;
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <strong>${f.chofer}</strong><br>
+        ⏱ ${tiempo}
+      `;
+      listaPendientes.appendChild(li);
+    }
   });
 
-  // === PENDIENTES ===
-  pendientesWeb.forEach((chofer) => {
-    const li = document.createElement("li");
-    li.textContent = chofer;
-    listaPendientes.appendChild(li);
-  });
-
-  // === CONTADORES ===
-  const pendientesCount = pendientesWeb.size;
-  const despachadosCount = despachadosHoy.length;
-  const activosCount = pendientesCount + despachadosCount;
-
-  totalPendientes.textContent = pendientesCount;
-  totalDespachados.textContent = despachadosCount;
-  totalActivos.textContent = activosCount;
+  totalPendientes.textContent = pendientes;
+  totalDespachados.textContent = despachados;
+  totalActivos.textContent = pendientes + despachados;
 }
+
+/*************************************************
+ * ACTUALIZACIÓN EN VIVO
+ *************************************************/
+setInterval(render, 1000);
+
+/*************************************************
+ * BOTÓN RESET (SOLO TESTING)
+ *************************************************/
+const resetBtn = document.createElement("button");
+resetBtn.textContent = "🧪 Reset testing";
+resetBtn.style.marginTop = "20px";
+resetBtn.onclick = () => {
+  localStorage.removeItem("fichajes_hoy");
+  localStorage.removeItem("driverName");
+  location.reload();
+};
+panelSection.appendChild(resetBtn);
