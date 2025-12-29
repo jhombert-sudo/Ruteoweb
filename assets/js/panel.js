@@ -5,12 +5,13 @@ const params = new URLSearchParams(window.location.search);
 const esPanel = params.get("panel") === "1";
 
 const panelSection = document.getElementById("panel");
+
 if (!esPanel) {
   if (panelSection) panelSection.style.display = "none";
   throw new Error("Vista chofer: panel deshabilitado");
 }
 
-// Ocultamos la vista de fichaje
+// Ocultamos fichaje
 const fichajeWrapper = document.querySelector(".wrapper");
 if (fichajeWrapper) fichajeWrapper.style.display = "none";
 
@@ -34,7 +35,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 /*************************************************
- * ELEMENTOS DEL PANEL
+ * ELEMENTOS UI
  *************************************************/
 const listaPendientes = document.getElementById("lista-pendientes");
 const listaDespachados = document.getElementById("lista-despachados");
@@ -51,6 +52,7 @@ function hoyISO() {
 }
 
 function formatearTiempo(ms) {
+  if (ms < 0) ms = 0;
   const s = Math.floor(ms / 1000);
   const h = String(Math.floor(s / 3600)).padStart(2, "0");
   const m = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
@@ -67,14 +69,14 @@ let despachosHoy = [];
 /*************************************************
  * ESCUCHAR FICHAJES (FUENTE A)
  *************************************************/
-const fichajesRef = collection(db, "fichajes_hoy");
+const fichajesRef = collection(db, "fichajes_diarios");
 onSnapshot(fichajesRef, (snapshot) => {
   const hoy = hoyISO();
   fichajesHoy = [];
 
   snapshot.forEach((doc) => {
     if (doc.id.startsWith(hoy + "_")) {
-      fichajesHoy.push(doc.data());
+      fichajesHoy.push({ id: doc.id, ...doc.data() });
     }
   });
 });
@@ -95,7 +97,7 @@ onSnapshot(despachosRef, (snapshot) => {
 });
 
 /*************************************************
- * RENDER PRINCIPAL
+ * RENDER PRINCIPAL (ESTILO IMAGEN)
  *************************************************/
 function render() {
   listaPendientes.innerHTML = "";
@@ -106,40 +108,45 @@ function render() {
 
   fichajesHoy.forEach((f) => {
     const despacho = despachosHoy.find(d => d.chofer === f.chofer);
-    const llegada = new Date(f.horaLlegada);
+
+    const llegada = f.horaLlegada?.toDate
+      ? f.horaLlegada.toDate()
+      : new Date(f.horaLlegada);
 
     if (despacho) {
-      // 🟢 DESPACHADO
+      /******** DESPACHADO ********/
       despachados++;
 
-      const horaDespacho = despacho.updatedAt
-        ? new Date(despacho.updatedAt).toLocaleTimeString()
-        : "-";
+      const salida = despacho.updatedAt?.toDate
+        ? despacho.updatedAt.toDate()
+        : new Date(despacho.updatedAt);
 
-      const duracionMs = despacho.updatedAt
-        ? new Date(despacho.updatedAt) - llegada
-        : 0;
+      const duracion = salida - llegada;
 
       const li = document.createElement("li");
+      li.className = "item despachado";
       li.innerHTML = `
         <strong>${f.chofer}</strong><br>
-        ⏱ ${formatearTiempo(duracionMs)}<br>
-        🕒 Despacho: ${horaDespacho}<br>
-        📦 Paquetes: ${despacho.cantidad_comprobantes}<br>
+        🕒 Salida: ${salida.toLocaleTimeString()}<br>
+        ⏱ Espera: ${formatearTiempo(duracion)}<br>
+        📦 Paquetes: ${despacho.cantidad_comprobantes ?? "-"}<br>
         📍 ${Array.isArray(despacho.localidades) ? despacho.localidades.join(", ") : "-"}
       `;
       listaDespachados.appendChild(li);
 
     } else {
-      // 🟡 PENDIENTE
+      /******** PENDIENTE ********/
       pendientes++;
+
       const ahora = new Date();
-      const tiempo = formatearTiempo(ahora - llegada);
+      const espera = ahora - llegada;
 
       const li = document.createElement("li");
+      li.className = "item pendiente";
       li.innerHTML = `
         <strong>${f.chofer}</strong><br>
-        ⏱ ${tiempo}
+        ⏱ Espera: ${formatearTiempo(espera)}<br>
+        <span class="badge pendiente">Pendiente</span>
       `;
       listaPendientes.appendChild(li);
     }
@@ -154,3 +161,16 @@ function render() {
  * ACTUALIZACIÓN EN VIVO
  *************************************************/
 setInterval(render, 1000);
+
+/*************************************************
+ * RESET SOLO ADMIN (TESTING)
+ *************************************************/
+const resetBtn = document.createElement("button");
+resetBtn.textContent = "🧪 Reset testing";
+resetBtn.style.marginTop = "20px";
+resetBtn.onclick = () => {
+  if (!confirm("Resetear fichajes locales?")) return;
+  localStorage.clear();
+  location.reload();
+};
+panelSection.appendChild(resetBtn);
