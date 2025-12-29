@@ -42,6 +42,8 @@ const welcome = document.getElementById("welcome");
  * IDENTIDAD DEL CHOFER (POR DISPOSITIVO)
  *************************************************/
 const nombreChofer = obtenerNombreChofer();
+const driverId = generarDriverId(nombreChofer);
+
 welcome.innerText = `Bienvenido, ${nombreChofer}`;
 
 /*************************************************
@@ -56,44 +58,57 @@ btnFichar.addEventListener("click", async () => {
     return;
   }
 
-  await registrarLlegadaFirestore();
+  try {
+    await registrarLlegadaFirestore();
+  } catch (e) {
+    console.error(e);
+    alert("❌ Error al registrar llegada");
+  }
+
   loader.classList.add("hidden");
 });
 
 /*************************************************
- * REGISTRO DE LLEGADA EN FIRESTORE
+ * REGISTRO DE LLEGADA EN FIRESTORE (FUENTE ÚNICA)
  *************************************************/
 async function registrarLlegadaFirestore() {
   const hoy = new Date().toISOString().substring(0, 10);
-  const docId = `${hoy}_${nombreChofer.toUpperCase()}`;
+  const docId = `${hoy}_${driverId}`;
 
-  const ref = doc(db, "fichajes_hoy", docId);
+  const ref = doc(db, "fichajes_diarios", docId);
   const snap = await getDoc(ref);
 
   // ❌ Ya fichó hoy
   if (snap.exists()) {
     alert("⚠️ Ya estás registrado hoy.");
-    mostrarQR(nombreChofer);
+    mostrarQR(docId);
     return;
   }
 
-  // ✅ Crear fichaje
+  // Token QR temporal (2 horas)
+  const qrToken = crypto.randomUUID();
+  const expiraEn = Date.now() + 2 * 60 * 60 * 1000;
+
+  // ✅ Crear fichaje diario
   await setDoc(ref, {
     chofer: nombreChofer,
+    driverId,
     fecha: hoy,
-    horaLlegada: new Date().toISOString(),
     estado: "pendiente",
+    horaLlegada: serverTimestamp(), // ⬅️ CLAVE (no más hora local)
+    qrToken,
+    qrExpira: expiraEn,
     createdAt: serverTimestamp()
   });
 
   alert("Llegada registrada correctamente ✅");
-  mostrarQR(nombreChofer);
+  mostrarQR(docId);
 }
 
 /*************************************************
- * QR TEMPORAL (2 HORAS)
+ * QR TEMPORAL (URL REAL – NO NÚMEROS)
  *************************************************/
-function mostrarQR(nombre) {
+function mostrarQR(docId) {
   let contenedor = document.getElementById("qr-container");
 
   if (!contenedor) {
@@ -104,17 +119,19 @@ function mostrarQR(nombre) {
     document.querySelector(".card").appendChild(contenedor);
   }
 
+  const urlQR = `${location.origin}${location.pathname}?scan=${docId}`;
+
   contenedor.innerHTML = `
     <p><strong>Mostrá este QR al despachar</strong></p>
     <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-      nombre + "|" + Date.now()
+      urlQR
     )}" />
     <p style="font-size:12px;color:#666">
       QR válido por 2 horas
     </p>
   `;
 
-  // Expira a las 2 horas
+  // Expira visualmente a las 2 horas
   setTimeout(() => {
     contenedor.remove();
   }, 2 * 60 * 60 * 1000);
@@ -131,7 +148,21 @@ function obtenerNombreChofer() {
     localStorage.setItem("driverName", nombre);
   }
 
-  return nombre;
+  return nombre.trim();
+}
+
+/*************************************************
+ * DRIVER ID ESTABLE (MISMO CELU = MISMO ID)
+ *************************************************/
+function generarDriverId(nombre) {
+  let id = localStorage.getItem("driverId");
+
+  if (!id) {
+    id = nombre.toLowerCase().replace(/\s+/g, "_");
+    localStorage.setItem("driverId", id);
+  }
+
+  return id;
 }
 
 /*************************************************
