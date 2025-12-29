@@ -6,29 +6,29 @@
 
 body {
   margin: 0;
-  background: #f1f5f9; /* gris pro */
+  background: #3933EB; /* 🔥 AZUL PRINCIPAL */
 }
 
 /* ================= HEADER ================= */
 .topbar {
-  background: linear-gradient(135deg, #0f172a, #1e293b); /* azul marino oscuro */
+  background: #3933EB; /* 🔥 mismo azul */
   color: white;
-  padding: 14px 20px;
+  padding: 16px 28px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
 }
 
 .logo {
-  font-weight: 700;
+  font-weight: 800;
   font-size: 18px;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
 }
 
 .icons {
   font-size: 18px;
-  opacity: 0.5;
+  opacity: 0.6;
   pointer-events: none;
 }
 
@@ -36,7 +36,7 @@ body {
 .wrapper {
   display: flex;
   justify-content: center;
-  padding: 48px 16px;
+  padding: 64px 16px;
 }
 
 .card {
@@ -45,7 +45,7 @@ body {
   max-width: 420px;
   border-radius: 18px;
   padding: 36px 26px;
-  box-shadow: 0 30px 60px rgba(15,23,42,0.18);
+  box-shadow: 0 40px 80px rgba(0,0,0,0.35);
   text-align: center;
 }
 
@@ -65,24 +65,24 @@ h1 {
 .primary-btn {
   background: linear-gradient(180deg, #f59e0b, #f97316);
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 14px;
   font-size: 16px;
   color: white;
   width: 100%;
   cursor: pointer;
-  font-weight: 600;
-  box-shadow: 0 10px 22px rgba(249,115,22,0.45);
+  font-weight: 700;
+  box-shadow: 0 12px 26px rgba(249,115,22,0.45);
   transition: transform .15s ease, box-shadow .15s ease;
 }
 
 .primary-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 16px 30px rgba(249,115,22,0.55);
+  transform: translateY(-3px);
+  box-shadow: 0 18px 36px rgba(249,115,22,0.6);
 }
 
 .primary-btn:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 
 /* ================= LOADER ================= */
@@ -95,7 +95,7 @@ h1 {
 .divider {
   height: 1px;
   background: #e5e7eb;
-  margin: 30px 0;
+  margin: 32px 0;
 }
 
 .section {
@@ -117,39 +117,28 @@ h1 {
   display: none;
 }
 
-/* ================= FIX DESKTOP ================= */
-@media (min-width: 1024px) {
-  .wrapper {
-    padding-top: 90px;
-  }
-
-  .card {
-    max-width: 480px;
-  }
-}
-
-/* =================================================
-   ================= PANEL OPERATIVO =================
-   ================================================= */
-
+/* ================= PANEL OPERATIVO ================= */
 .panel-wrapper {
-  max-width: 1400px; /* 🔥 pantalla completa */
-  margin: 40px auto;
-  padding: 0 24px 60px;
+  max-width: 100%;
+  margin: 0;
+  padding: 48px 56px 80px;
+  background: #f8fafc; /* contraste pro sobre el azul */
+  border-radius: 28px 28px 0 0;
+  box-shadow: 0 -20px 60px rgba(0,0,0,0.25);
 }
 
 .panel-title {
-  font-size: 24px;
-  font-weight: 800;
-  margin-bottom: 26px;
+  font-size: 26px;
+  font-weight: 900;
+  margin-bottom: 28px;
   color: #0f172a;
 }
 
-/* ===== NUEVO LAYOUT PRO ===== */
+/* ===== LAYOUT GENERAL ===== */
 .panel-layout {
   display: grid;
-  grid-template-columns: 2fr 1fr; /* izquierda / derecha */
-  gap: 28px;
+  grid-template-columns: 2.3fr 1fr;
+  gap: 32px;
   align-items: start;
 }
 
@@ -157,7 +146,7 @@ h1 {
 .panel-main {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 28px;
 }
 
 /* ===== COLUMNA LATERAL ===== */
@@ -176,52 +165,52 @@ h1 {
 
 .resumen-item {
   background: white;
-  border-radius: 16px;
-  padding: 22px;
-  box-shadow: 0 24px 50px rgba(15,23,42,0.15);
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 24px 50px rgba(15,23,42,0.18);
   text-align: center;
   transition: transform .2s ease, box-shadow .2s ease;
 }
 
 .resumen-item:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 36px 70px rgba(15,23,42,0.25);
+  transform: translateY(-6px);
+  box-shadow: 0 36px 70px rgba(15,23,42,0.3);
 }
 
 .resumen-label {
   display: block;
-  font-size: 13px;
+  font-size: 12px;
   color: #64748b;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   text-transform: uppercase;
-  letter-spacing: .08em;
+  letter-spacing: .12em;
 }
 
 .resumen-value {
-  font-size: 36px;
+  font-size: 38px;
   font-weight: 900;
   color: #0f172a;
 }
 
-/* ===== COLUMNAS PENDIENTES / DESPACHADOS ===== */
+/* ===== TABLAS ===== */
 .panel-tablas {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  gap: 28px;
 }
 
 .panel-col {
   background: white;
-  border-radius: 18px;
-  padding: 22px;
-  box-shadow: 0 24px 50px rgba(15,23,42,0.15);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 24px 50px rgba(15,23,42,0.18);
 }
 
 .panel-col h3 {
   margin-top: 0;
-  margin-bottom: 16px;
-  font-size: 17px;
-  font-weight: 800;
+  margin-bottom: 18px;
+  font-size: 18px;
+  font-weight: 900;
   color: #0f172a;
 }
 
@@ -233,11 +222,11 @@ h1 {
 }
 
 .lista li {
-  padding: 14px 14px;
+  padding: 16px;
   font-size: 14px;
-  border-radius: 12px;
-  margin-bottom: 12px;
-  line-height: 1.4;
+  border-radius: 14px;
+  margin-bottom: 14px;
+  line-height: 1.45;
   transition: transform .15s ease, box-shadow .15s ease;
 }
 
@@ -248,8 +237,8 @@ h1 {
 }
 
 #lista-pendientes li:hover {
-  transform: translateX(6px);
-  box-shadow: 0 10px 22px rgba(249,115,22,0.25);
+  transform: translateX(8px);
+  box-shadow: 0 12px 26px rgba(249,115,22,0.35);
 }
 
 #lista-despachados li {
@@ -258,16 +247,16 @@ h1 {
 }
 
 #lista-despachados li:hover {
-  transform: translateX(6px);
-  box-shadow: 0 10px 22px rgba(22,163,74,0.25);
+  transform: translateX(8px);
+  box-shadow: 0 12px 26px rgba(22,163,74,0.35);
 }
 
 /* ===== FIRMA ===== */
 .panel-footer {
-  margin-top: 20px;
+  margin-top: 30px;
   font-size: 13px;
   color: #64748b;
-  text-align: center;
+  text-align: left;
 }
 
 .panel-footer strong {
@@ -276,6 +265,10 @@ h1 {
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 1024px) {
+  .panel-wrapper {
+    padding: 32px 20px 60px;
+  }
+
   .panel-layout {
     grid-template-columns: 1fr;
   }
