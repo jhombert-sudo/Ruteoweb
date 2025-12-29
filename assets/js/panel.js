@@ -68,6 +68,7 @@ function formatearTiempo(ms) {
  *************************************************/
 let fichajesHoy = [];
 let despachosHoy = [];
+let salidasDetectadas = {}; // 🕒 salida real detectada por el panel
 
 /*************************************************
  * ESCUCHAR FICHAJES
@@ -129,16 +130,20 @@ function render() {
       return despachoIdNormalizado === f._id;
     });
 
-    const llegada = f.horaLlegada?.toDate
-      ? f.horaLlegada.toDate()
-      : new Date(f.horaLlegada);
+    // ⏱ LLEGADA SEGURA (serverTimestamp fallback)
+    const llegada =
+      f.horaLlegada?.toDate?.() ||
+      f.createdAt?.toDate?.() ||
+      new Date();
 
     if (despacho) {
       despachados++;
 
-      const salida = despacho.updatedAt?.toDate
-        ? despacho.updatedAt.toDate()
-        : new Date(despacho.updatedAt);
+      // 🕒 salida = momento exacto cuando pasó a despachado en el panel
+      if (!salidasDetectadas[f._id]) {
+        salidasDetectadas[f._id] = new Date();
+      }
+      const salida = salidasDetectadas[f._id];
 
       const duracion = salida - llegada;
 
@@ -180,14 +185,16 @@ function render() {
 setInterval(render, 1000);
 
 /*************************************************
- * RESET SOLO ADMIN (TESTING)
+ * RESET SOLO ADMIN (TESTING – SOLO VISTA)
  *************************************************/
 const resetBtn = document.createElement("button");
 resetBtn.textContent = "🧪 Reset testing";
 resetBtn.style.marginTop = "20px";
 resetBtn.onclick = () => {
-  if (!confirm("Resetear pruebas locales?")) return;
-  localStorage.clear();
-  location.reload();
+  if (!confirm("Resetear vista del panel?")) return;
+  fichajesHoy = [];
+  despachosHoy = [];
+  salidasDetectadas = {};
+  render();
 };
 panelSection.appendChild(resetBtn);
