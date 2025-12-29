@@ -51,7 +51,7 @@ function hoyISO() {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`; // 👈 FECHA LOCAL REAL
+  return `${y}-${m}-${day}`;
 }
 
 function formatearTiempo(ms) {
@@ -70,7 +70,7 @@ let fichajesHoy = [];
 let despachosHoy = [];
 
 /*************************************************
- * ESCUCHAR FICHAJES (FUENTE A)
+ * ESCUCHAR FICHAJES
  *************************************************/
 const fichajesRef = collection(db, "fichajes_diarios");
 onSnapshot(fichajesRef, (snapshot) => {
@@ -86,11 +86,11 @@ onSnapshot(fichajesRef, (snapshot) => {
     }
   });
 
-  render(); // 👈 render inmediato
+  render();
 });
 
 /*************************************************
- * ESCUCHAR DESPACHOS (FUENTE B)
+ * ESCUCHAR DESPACHOS
  *************************************************/
 const despachosRef = collection(db, "despachos_diarios");
 onSnapshot(despachosRef, (snapshot) => {
@@ -106,7 +106,7 @@ onSnapshot(despachosRef, (snapshot) => {
     }
   });
 
-  render(); // 👈 render inmediato
+  render();
 });
 
 /*************************************************
@@ -121,7 +121,13 @@ function render() {
 
   fichajesHoy.forEach((f) => {
 
-    const despacho = despachosHoy.find(d => d._id === f._id);
+    // 🔥 NORMALIZACIÓN DEL DESPACHO (NO TOCA LA QUERY)
+    const despacho = despachosHoy.find(d => {
+      const despachoIdNormalizado = d._id
+        .toLowerCase()
+        .replace(/\s+/g, "_");
+      return despachoIdNormalizado === f._id;
+    });
 
     const llegada = f.horaLlegada?.toDate
       ? f.horaLlegada.toDate()
@@ -169,7 +175,7 @@ function render() {
 }
 
 /*************************************************
- * ACTUALIZACIÓN EN VIVO (CRONO)
+ * ACTUALIZACIÓN EN VIVO
  *************************************************/
 setInterval(render, 1000);
 
