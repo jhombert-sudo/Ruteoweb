@@ -39,6 +39,17 @@ const loader = document.getElementById("loader");
 const welcome = document.getElementById("welcome");
 
 /*************************************************
+ * UTILIDAD FECHA LOCAL (CLAVE 🔑)
+ *************************************************/
+function hoyISO() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/*************************************************
  * IDENTIDAD DEL CHOFER (POR DISPOSITIVO)
  *************************************************/
 const nombreChofer = obtenerNombreChofer();
@@ -69,10 +80,10 @@ btnFichar.addEventListener("click", async () => {
 });
 
 /*************************************************
- * REGISTRO DE LLEGADA EN FIRESTORE (FUENTE ÚNICA)
+ * REGISTRO DE LLEGADA EN FIRESTORE
  *************************************************/
 async function registrarLlegadaFirestore() {
-  const hoy = new Date().toISOString().substring(0, 10);
+  const hoy = hoyISO(); // ✅ FECHA LOCAL
   const docId = `${hoy}_${driverId}`;
 
   const ref = doc(db, "fichajes_diarios", docId);
@@ -95,7 +106,7 @@ async function registrarLlegadaFirestore() {
     driverId,
     fecha: hoy,
     estado: "pendiente",
-    horaLlegada: serverTimestamp(), // ⬅️ CLAVE (no más hora local)
+    horaLlegada: serverTimestamp(),
     qrToken,
     qrExpira: expiraEn,
     createdAt: serverTimestamp()
@@ -106,7 +117,7 @@ async function registrarLlegadaFirestore() {
 }
 
 /*************************************************
- * QR TEMPORAL (URL REAL – NO NÚMEROS)
+ * QR TEMPORAL (VISUAL)
  *************************************************/
 function mostrarQR(docId) {
   let contenedor = document.getElementById("qr-container");
@@ -131,7 +142,6 @@ function mostrarQR(docId) {
     </p>
   `;
 
-  // Expira visualmente a las 2 horas
   setTimeout(() => {
     contenedor.remove();
   }, 2 * 60 * 60 * 1000);
@@ -152,7 +162,7 @@ function obtenerNombreChofer() {
 }
 
 /*************************************************
- * DRIVER ID ESTABLE (MISMO CELU = MISMO ID)
+ * DRIVER ID ESTABLE
  *************************************************/
 function generarDriverId(nombre) {
   let id = localStorage.getItem("driverId");
@@ -166,7 +176,7 @@ function generarDriverId(nombre) {
 }
 
 /*************************************************
- * VALIDAR QUE NO CAMBIEN DE IDENTIDAD
+ * VALIDAR IDENTIDAD DEL DISPOSITIVO
  *************************************************/
 function validarIdentidadDispositivo(nombreActual) {
   const nombreGuardado = localStorage.getItem("driverName");
