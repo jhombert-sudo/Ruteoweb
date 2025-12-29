@@ -68,22 +68,17 @@ function formatearTiempo(ms) {
  *************************************************/
 let fichajesHoy = [];
 let despachosHoy = [];
-let salidasDetectadas = {}; // 🕒 salida real detectada por el panel
 
 /*************************************************
  * ESCUCHAR FICHAJES
  *************************************************/
-const fichajesRef = collection(db, "fichajes_diarios");
-onSnapshot(fichajesRef, (snapshot) => {
+onSnapshot(collection(db, "fichajes_diarios"), (snapshot) => {
   const hoy = hoyISO();
   fichajesHoy = [];
 
   snapshot.forEach((doc) => {
     if (doc.id.startsWith(hoy + "_")) {
-      fichajesHoy.push({
-        _id: doc.id,
-        ...doc.data()
-      });
+      fichajesHoy.push({ _id: doc.id, ...doc.data() });
     }
   });
 
@@ -93,17 +88,13 @@ onSnapshot(fichajesRef, (snapshot) => {
 /*************************************************
  * ESCUCHAR DESPACHOS
  *************************************************/
-const despachosRef = collection(db, "despachos_diarios");
-onSnapshot(despachosRef, (snapshot) => {
+onSnapshot(collection(db, "despachos_diarios"), (snapshot) => {
   const hoy = hoyISO();
   despachosHoy = [];
 
   snapshot.forEach((doc) => {
     if (doc.id.startsWith(hoy + "_")) {
-      despachosHoy.push({
-        _id: doc.id,
-        ...doc.data()
-      });
+      despachosHoy.push({ _id: doc.id, ...doc.data() });
     }
   });
 
@@ -122,15 +113,12 @@ function render() {
 
   fichajesHoy.forEach((f) => {
 
-    // 🔥 NORMALIZACIÓN DEL DESPACHO (NO TOCA LA QUERY)
-    const despacho = despachosHoy.find(d => {
-      const despachoIdNormalizado = d._id
-        .toLowerCase()
-        .replace(/\s+/g, "_");
-      return despachoIdNormalizado === f._id;
-    });
+    // 🔑 MATCH CORRECTO (normalizando solo el despacho)
+    const despacho = despachosHoy.find(d =>
+      d._id.toLowerCase().replace(/\s+/g, "_") === f._id
+    );
 
-    // ⏱ LLEGADA SEGURA (serverTimestamp fallback)
+    // ⏱ llegada segura
     const llegada =
       f.horaLlegada?.toDate?.() ||
       f.createdAt?.toDate?.() ||
@@ -139,11 +127,10 @@ function render() {
     if (despacho) {
       despachados++;
 
-      // 🕒 salida = momento exacto cuando pasó a despachado en el panel
-      if (!salidasDetectadas[f._id]) {
-        salidasDetectadas[f._id] = new Date();
-      }
-      const salida = salidasDetectadas[f._id];
+      // 🕒 salida real si existe, fallback visual si no
+      const salida =
+        despacho.updatedAt?.toDate?.() ||
+        new Date();
 
       const duracion = salida - llegada;
 
@@ -185,7 +172,7 @@ function render() {
 setInterval(render, 1000);
 
 /*************************************************
- * RESET SOLO ADMIN (TESTING – SOLO VISTA)
+ * RESET SOLO VISTA (NO FIRESTORE)
  *************************************************/
 const resetBtn = document.createElement("button");
 resetBtn.textContent = "🧪 Reset testing";
@@ -194,7 +181,6 @@ resetBtn.onclick = () => {
   if (!confirm("Resetear vista del panel?")) return;
   fichajesHoy = [];
   despachosHoy = [];
-  salidasDetectadas = {};
   render();
 };
 panelSection.appendChild(resetBtn);
