@@ -11,7 +11,6 @@ if (!esPanel) {
   throw new Error("Vista chofer: panel deshabilitado");
 }
 
-// Ocultamos fichaje
 const fichajeWrapper = document.querySelector(".wrapper");
 if (fichajeWrapper) fichajeWrapper.style.display = "none";
 
@@ -76,7 +75,10 @@ onSnapshot(fichajesRef, (snapshot) => {
 
   snapshot.forEach((doc) => {
     if (doc.id.startsWith(hoy + "_")) {
-      fichajesHoy.push({ id: doc.id, ...doc.data() });
+      fichajesHoy.push({
+        _id: doc.id,        // 🔑 CLAVE REAL
+        ...doc.data()
+      });
     }
   });
 });
@@ -91,13 +93,16 @@ onSnapshot(despachosRef, (snapshot) => {
 
   snapshot.forEach((doc) => {
     if (doc.id.startsWith(hoy + "_")) {
-      despachosHoy.push(doc.data());
+      despachosHoy.push({
+        _id: doc.id,        // 🔑 CLAVE REAL
+        ...doc.data()
+      });
     }
   });
 });
 
 /*************************************************
- * RENDER PRINCIPAL (ESTILO IMAGEN)
+ * RENDER PRINCIPAL
  *************************************************/
 function render() {
   listaPendientes.innerHTML = "";
@@ -107,7 +112,9 @@ function render() {
   let despachados = 0;
 
   fichajesHoy.forEach((f) => {
-    const despacho = despachosHoy.find(d => d.chofer === f.chofer);
+
+    // 🔥 COMPARACIÓN CORRECTA (ID vs ID)
+    const despacho = despachosHoy.find(d => d._id === f._id);
 
     const llegada = f.horaLlegada?.toDate
       ? f.horaLlegada.toDate()
