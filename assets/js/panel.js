@@ -47,7 +47,11 @@ const totalDespachados = document.getElementById("total-despachados");
  * UTILIDADES
  *************************************************/
 function hoyISO() {
-  return new Date().toISOString().substring(0, 10);
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`; // 👈 FECHA LOCAL REAL
 }
 
 function formatearTiempo(ms) {
@@ -76,11 +80,13 @@ onSnapshot(fichajesRef, (snapshot) => {
   snapshot.forEach((doc) => {
     if (doc.id.startsWith(hoy + "_")) {
       fichajesHoy.push({
-        _id: doc.id,        // 🔑 CLAVE REAL
+        _id: doc.id,
         ...doc.data()
       });
     }
   });
+
+  render(); // 👈 render inmediato
 });
 
 /*************************************************
@@ -94,11 +100,13 @@ onSnapshot(despachosRef, (snapshot) => {
   snapshot.forEach((doc) => {
     if (doc.id.startsWith(hoy + "_")) {
       despachosHoy.push({
-        _id: doc.id,        // 🔑 CLAVE REAL
+        _id: doc.id,
         ...doc.data()
       });
     }
   });
+
+  render(); // 👈 render inmediato
 });
 
 /*************************************************
@@ -113,7 +121,6 @@ function render() {
 
   fichajesHoy.forEach((f) => {
 
-    // 🔥 COMPARACIÓN CORRECTA (ID vs ID)
     const despacho = despachosHoy.find(d => d._id === f._id);
 
     const llegada = f.horaLlegada?.toDate
@@ -121,7 +128,6 @@ function render() {
       : new Date(f.horaLlegada);
 
     if (despacho) {
-      /******** DESPACHADO ********/
       despachados++;
 
       const salida = despacho.updatedAt?.toDate
@@ -142,11 +148,9 @@ function render() {
       listaDespachados.appendChild(li);
 
     } else {
-      /******** PENDIENTE ********/
       pendientes++;
 
-      const ahora = new Date();
-      const espera = ahora - llegada;
+      const espera = new Date() - llegada;
 
       const li = document.createElement("li");
       li.className = "item pendiente";
@@ -165,7 +169,7 @@ function render() {
 }
 
 /*************************************************
- * ACTUALIZACIÓN EN VIVO
+ * ACTUALIZACIÓN EN VIVO (CRONO)
  *************************************************/
 setInterval(render, 1000);
 
@@ -176,7 +180,7 @@ const resetBtn = document.createElement("button");
 resetBtn.textContent = "🧪 Reset testing";
 resetBtn.style.marginTop = "20px";
 resetBtn.onclick = () => {
-  if (!confirm("Resetear fichajes locales?")) return;
+  if (!confirm("Resetear pruebas locales?")) return;
   localStorage.clear();
   location.reload();
 };
