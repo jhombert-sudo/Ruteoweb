@@ -35,12 +35,15 @@
         ⏳ Esperando confirmación de llegada...
       </div>
 
+      <!-- ✅ CONTENEDOR QR (NO SE BORRA, SE USA DESDE driver.js) -->
+      <div id="qr-container" style="margin-top:20px;text-align:center;"></div>
+
       <div class="divider"></div>
 
       <div class="section">
         <h3>Ubicación</h3>
         <p>
-          Centro de Despacho BIDCOM,Estomba 522 Buenos Aires.
+          Centro de Despacho BIDCOM, Estomba 522, Buenos Aires.
         </p>
       </div>
 
@@ -70,6 +73,13 @@
       </div>
     </div>
 
+    <!-- ================= ZONA QR (DESPACHO) ================= -->
+    <div id="qr-despacho" style="margin:20px 0; display:none;">
+      <h3>📷 Escanear QR para despachar</h3>
+      <div id="qr-reader" style="max-width:320px"></div>
+      <p id="qr-resultado" style="font-weight:bold;margin-top:10px;"></p>
+    </div>
+
     <!-- LISTAS -->
     <div class="panel-tablas">
 
@@ -90,7 +100,7 @@
   </section>
 
   <!-- ================= SCRIPTS ================= -->
-  <!-- DRIVER: identidad + fichaje -->
+  <!-- DRIVER: identidad + fichaje + QR -->
   <script type="module" src="assets/js/driver.js"></script>
 
   <!-- PANEL: lectura Firestore + estados -->
