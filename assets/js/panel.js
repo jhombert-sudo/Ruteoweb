@@ -113,24 +113,32 @@ function render() {
 
   fichajesHoy.forEach((f) => {
 
+    // 🔑 MATCH CORRECTO (normalizando solo el despacho)
     const despacho = despachosHoy.find(d =>
       d._id.toLowerCase().replace(/\s+/g, "_") === f._id
     );
 
-    // ⏱ llegada estable
-    const llegada = f.createdAt?.toDate?.() || new Date();
+    // ⏱ llegada segura
+    const llegada =
+      f.horaLlegada?.toDate?.() ||
+      f.createdAt?.toDate?.() ||
+      new Date();
 
     if (despacho) {
       despachados++;
 
-      const salida = despacho.updatedAt?.toDate?.() || null;
-      const duracion = salida ? salida - llegada : 0;
+      // 🕒 salida real si existe, fallback visual si no
+      const salida =
+        despacho.updatedAt?.toDate?.() ||
+        new Date();
+
+      const duracion = salida - llegada;
 
       const li = document.createElement("li");
       li.className = "item despachado";
       li.innerHTML = `
         <strong>${f.chofer}</strong><br>
-        🕒 Salida: ${salida ? salida.toLocaleTimeString() : "—"}<br>
+        🕒 Salida: ${salida.toLocaleTimeString()}<br>
         ⏱ Espera: ${formatearTiempo(duracion)}<br>
         📦 Paquetes: ${despacho.cantidad_comprobantes ?? "-"}<br>
         📍 ${Array.isArray(despacho.localidades) ? despacho.localidades.join(", ") : "-"}
@@ -164,7 +172,7 @@ function render() {
 setInterval(render, 1000);
 
 /*************************************************
- * RESET SOLO VISTA (ESTABLE)
+ * RESET SOLO VISTA (NO FIRESTORE)
  *************************************************/
 const resetBtn = document.createElement("button");
 resetBtn.textContent = "🧪 Reset testing";
