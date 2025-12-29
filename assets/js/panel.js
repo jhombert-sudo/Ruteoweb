@@ -64,10 +64,20 @@ function formatearTiempo(ms) {
 }
 
 /*************************************************
- * ESTADO GLOBAL
+ * ESTADO GLOBAL (LOCAL Y SEGURO)
  *************************************************/
 let fichajesHoy = [];
 let despachosHoy = [];
+
+// ⏱ timestamps locales para que el tiempo NO se resetee
+const llegadasLocal = {};
+const salidasLocal = {};
+
+// 🧪 IDs ignorados por reset (persisten en refresh)
+const ignoredKey = "panel_ignored_ids";
+let idsIgnorados = new Set(
+  JSON.parse(sessionStorage.getItem(ignoredKey) || "[]")
+);
 
 /*************************************************
  * ESCUCHAR FICHAJES
@@ -77,9 +87,20 @@ onSnapshot(collection(db, "fichajes_diarios"), (snapshot) => {
   fichajesHoy = [];
 
   snapshot.forEach((doc) => {
-    if (doc.id.startsWith(hoy + "_")) {
-      fichajesHoy.push({ _id: doc.id, ...doc.data() });
+    if (!doc.id.startsWith(hoy + "_")) return;
+    if (idsIgnorados.has(doc.id)) return;
+
+    // guardamos llegada local UNA SOLA VEZ
+    if (!llegadasLocal[doc.id]) {
+      const data = doc.data();
+      const ts =
+        data.horaLlegada?.toDate?.() ||
+        data.createdAt?.toDate?.() ||
+        new Date();
+      llegadasLocal[doc.id] = ts;
     }
+
+    fichajesHoy.push({ _id: doc.id, ...doc.data() });
   });
 
   render();
@@ -93,9 +114,10 @@ onSnapshot(collection(db, "despachos_diarios"), (snapshot) => {
   despachosHoy = [];
 
   snapshot.forEach((doc) => {
-    if (doc.id.startsWith(hoy + "_")) {
-      despachosHoy.push({ _id: doc.id, ...doc.data() });
-    }
+    if (!doc.id.startsWith(hoy + "_")) return;
+    if (idsIgnorados.has(doc.id)) return;
+
+    despachosHoy.push({ _id: doc.id, ...doc.data() });
   });
 
   render();
@@ -113,24 +135,22 @@ function render() {
 
   fichajesHoy.forEach((f) => {
 
-    // 🔑 MATCH CORRECTO (normalizando solo el despacho)
+    // 🔑 MATCH CORRECTO (NO SE TOCA)
     const despacho = despachosHoy.find(d =>
       d._id.toLowerCase().replace(/\s+/g, "_") === f._id
     );
 
-    // ⏱ llegada segura
-    const llegada =
-      f.horaLlegada?.toDate?.() ||
-      f.createdAt?.toDate?.() ||
-      new Date();
+    const llegada = llegadasLocal[f._id] || new Date();
 
     if (despacho) {
       despachados++;
 
-      // 🕒 salida real si existe, fallback visual si no
-      const salida =
-        despacho.updatedAt?.toDate?.() ||
-        new Date();
+      // 🕒 salida coherente
+      if (!salidasLocal[f._id]) {
+        salidasLocal[f._id] =
+          despacho.updatedAt?.toDate?.() || new Date();
+      }
+      const salida = salidasLocal[f._id];
 
       const duracion = salida - llegada;
 
@@ -172,13 +192,19 @@ function render() {
 setInterval(render, 1000);
 
 /*************************************************
- * RESET SOLO VISTA (NO FIRESTORE)
+ * RESET SOLO VISTA (TESTING REAL)
  *************************************************/
 const resetBtn = document.createElement("button");
 resetBtn.textContent = "🧪 Reset testing";
 resetBtn.style.marginTop = "20px";
 resetBtn.onclick = () => {
-  if (!confirm("Resetear vista del panel?")) return;
+  if (!confirm("Resetear vista del panel (solo testing)?")) return;
+
+  fichajesHoy.forEach(f => idsIgnorados.add(f._id));
+  despachosHoy.forEach(d => idsIgnorados.add(d._id));
+
+  sessionStorage.setItem(ignoredKey, JSON.stringify([...idsIgnorados]));
+
   fichajesHoy = [];
   despachosHoy = [];
   render();
