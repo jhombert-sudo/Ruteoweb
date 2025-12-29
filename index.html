@@ -13,7 +13,11 @@
 
   <!-- ================= HEADER ================= -->
   <header class="topbar">
-    <div class="logo">🚚 Despachos</div>
+    <div class="logo" style="display:flex;align-items:center;gap:10px;">
+      <!-- ✅ LOGO NUEVO (NO BORRA NADA) -->
+      <img src="img/logo.jpeg" alt="Logo Despachos" style="height:32px;width:auto;">
+      🚚 Despachos
+    </div>
     <div class="icons">🔔 ✉️ ⚙️</div>
   </header>
 
@@ -55,29 +59,25 @@
 
     <h2 class="panel-title">Panel del día</h2>
 
-    <!-- 🔥 LAYOUT PRINCIPAL (NUEVO, SOLO VISUAL) -->
+    <!-- 🔥 LAYOUT PRINCIPAL -->
     <div class="panel-layout">
 
-      <!-- IZQUIERDA: LISTAS -->
+      <!-- IZQUIERDA -->
       <div class="panel-main">
 
-        <!-- ZONA QR -->
         <div id="qr-despacho" style="margin:20px 0; display:none;">
           <h3>📷 Escanear QR para despachar</h3>
           <div id="qr-reader" style="max-width:320px"></div>
           <p id="qr-resultado" style="font-weight:bold;margin-top:10px;"></p>
         </div>
 
-        <!-- LISTAS -->
         <div class="panel-tablas">
 
-          <!-- PENDIENTES -->
           <div class="panel-col">
             <h3>🟡 Pendientes</h3>
             <ul id="lista-pendientes" class="lista"></ul>
           </div>
 
-          <!-- DESPACHADOS -->
           <div class="panel-col">
             <h3>🟢 Despachados</h3>
             <ul id="lista-despachados" class="lista"></ul>
@@ -86,7 +86,7 @@
         </div>
       </div>
 
-      <!-- DERECHA: RESUMEN -->
+      <!-- DERECHA -->
       <aside class="panel-side">
         <div class="panel-resumen">
 
@@ -112,7 +112,7 @@
 
     <!-- FIRMA -->
     <div class="panel-signature">
-      Desarrollado por <strong>JUCA®</strong>
+      <strong>JUCA®</strong>
     </div>
 
   </section>
