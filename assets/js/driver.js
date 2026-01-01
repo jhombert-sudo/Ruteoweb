@@ -19,7 +19,12 @@ import {
   doc,
   getDoc,
   setDoc,
-  serverTimestamp
+  serverTimestamp,
+  collection,
+  getDocs,
+  query,
+  where,
+  orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -38,6 +43,10 @@ const btnFichar = document.getElementById("btnFichar");
 const loader = document.getElementById("loader");
 const welcome = document.getElementById("welcome");
 
+// ✅ NUEVOS
+const driverSelect = document.getElementById("driverSelect");
+const turnoInfo = document.getElementById("turnoInfo");
+
 /*************************************************
  * UTILIDAD FECHA LOCAL (CLAVE 🔑)
  *************************************************/
@@ -50,12 +59,118 @@ function hoyISO() {
 }
 
 /*************************************************
- * IDENTIDAD DEL CHOFER (POR DISPOSITIVO)
+ * DEVICE ID (LOCK REAL POR CELULAR)
  *************************************************/
-const nombreChofer = obtenerNombreChofer();
-const driverId = generarDriverId(nombreChofer);
+function getDeviceId() {
+  let id = localStorage.getItem("deviceId");
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("deviceId", id);
+  }
+  return id;
+}
+const deviceId = getDeviceId();
 
-welcome.innerText = `Bienvenido, ${nombreChofer}`;
+/*************************************************
+ * IDENTIDAD DEL CHOFER (DESDE FIRESTORE)
+ *************************************************/
+let nombreChofer = null;
+let driverId = null;
+let tipoChofer = "NORMAL";
+
+/*************************************************
+ * CARGAR DROPDOWN DE CHOFERES + LOCK SI YA EXISTE
+ *************************************************/
+async function initChoferDropdown() {
+  if (!driverSelect) {
+    console.warn("No existe #driverSelect en el HTML");
+    return;
+  }
+
+  // 1) Traer choferes activos
+  const qChoferes = query(
+    collection(db, "choferes"),
+    where("activo", "==", true),
+    orderBy("nombre_display")
+  );
+
+  const snapChoferes = await getDocs(qChoferes);
+  const choferes = snapChoferes.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  driverSelect.innerHTML =
+    `<option value="">Seleccioná tu nombre</option>` +
+    choferes.map(c => `<option value="${c.id}">${c.nombre_display}</option>`).join("");
+
+  // 2) Si el celular ya está asignado -> bloquear selector
+  const refDev = doc(db, "dispositivos", deviceId);
+  const snapDev = await getDoc(refDev);
+
+  if (snapDev.exists()) {
+    driverId = snapDev.data().driverId;
+    nombreChofer = snapDev.data().nombre_display;
+    tipoChofer = snapDev.data().tipo || "NORMAL";
+
+    driverSelect.value = driverId;
+    driverSelect.disabled = true;
+
+    welcome.innerText = `Bienvenido, ${nombreChofer}`;
+    if (turnoInfo) {
+      turnoInfo.textContent = (tipoChofer === "TURBO") ? "🚀 TURBO (sin horario fijo)" : "";
+    }
+    return;
+  }
+
+  // 3) Si no está asignado -> permite elegir
+  driverSelect.addEventListener("change", () => {
+    const elegido = choferes.find(c => c.id === driverSelect.value);
+    if (!elegido) {
+      driverId = null;
+      nombreChofer = null;
+      tipoChofer = "NORMAL";
+      if (turnoInfo) turnoInfo.textContent = "";
+      welcome.innerText = "Bienvenido";
+      return;
+    }
+
+    driverId = elegido.id;
+    nombreChofer = elegido.nombre_display;
+    tipoChofer = elegido.tipo || "NORMAL";
+
+    welcome.innerText = `Bienvenido, ${nombreChofer}`;
+    if (turnoInfo) {
+      turnoInfo.textContent = (tipoChofer === "TURBO") ? "🚀 TURBO (sin horario fijo)" : "";
+    }
+  });
+}
+
+/*************************************************
+ * BLOQUEAR CELULAR A CHOFER (1 vez)
+ *************************************************/
+async function lockDeviceToDriver() {
+  const refDev = doc(db, "dispositivos", deviceId);
+  const snapDev = await getDoc(refDev);
+
+  if (snapDev.exists()) {
+    // Si ya estaba bloqueado, debe coincidir
+    if (snapDev.data().driverId !== driverId) {
+      alert("⚠️ Este celular ya está asignado a otro chofer.");
+      return false;
+    }
+    return true;
+  }
+
+  // Bloqueo inicial
+  await setDoc(refDev, {
+    deviceId,
+    driverId,
+    nombre_display: nombreChofer,
+    tipo: tipoChofer,
+    createdAt: serverTimestamp()
+  });
+
+  if (driverSelect) driverSelect.disabled = true;
+  return true;
+}
 
 /*************************************************
  * EVENTO BOTÓN FICHAR
@@ -63,8 +178,16 @@ welcome.innerText = `Bienvenido, ${nombreChofer}`;
 btnFichar.addEventListener("click", async () => {
   loader.classList.remove("hidden");
 
-  const identidadOk = validarIdentidadDispositivo(nombreChofer);
-  if (!identidadOk) {
+  // ✅ Debe estar seleccionado
+  if (!driverId || !nombreChofer) {
+    alert("Seleccioná tu nombre primero.");
+    loader.classList.add("hidden");
+    return;
+  }
+
+  // ✅ Lock por celular
+  const ok = await lockDeviceToDriver();
+  if (!ok) {
     loader.classList.add("hidden");
     return;
   }
@@ -100,10 +223,12 @@ async function registrarLlegadaFirestore() {
   const qrToken = crypto.randomUUID();
   const expiraEn = Date.now() + 2 * 60 * 60 * 1000;
 
-  // ✅ Crear fichaje diario
+  // ✅ Crear fichaje diario (se mantiene tu estructura)
   await setDoc(ref, {
     chofer: nombreChofer,
     driverId,
+    tipo: tipoChofer,          // ✅ nuevo (no rompe)
+    nombre_display: nombreChofer, // ✅ nuevo (no rompe)
     fecha: hoy,
     estado: "pendiente",
     horaLlegada: serverTimestamp(),
@@ -148,46 +273,6 @@ function mostrarQR(docId) {
 }
 
 /*************************************************
- * IDENTIDAD POR DISPOSITIVO
+ * INIT
  *************************************************/
-function obtenerNombreChofer() {
-  let nombre = localStorage.getItem("driverName");
-
-  if (!nombre) {
-    nombre = prompt("Ingresá tu nombre y apellido");
-    localStorage.setItem("driverName", nombre);
-  }
-
-  return nombre.trim();
-}
-
-/*************************************************
- * DRIVER ID ESTABLE
- *************************************************/
-function generarDriverId(nombre) {
-  let id = localStorage.getItem("driverId");
-
-  if (!id) {
-    id = nombre.toLowerCase().replace(/\s+/g, "_");
-    localStorage.setItem("driverId", id);
-  }
-
-  return id;
-}
-
-/*************************************************
- * VALIDAR IDENTIDAD DEL DISPOSITIVO
- *************************************************/
-function validarIdentidadDispositivo(nombreActual) {
-  const nombreGuardado = localStorage.getItem("driverName");
-
-  if (nombreGuardado !== nombreActual) {
-    alert(
-      "⚠️ Este celular ya está registrado con otro chofer.\n" +
-      "No podés usar un nombre diferente."
-    );
-    return false;
-  }
-
-  return true;
-}
+initChoferDropdown();
