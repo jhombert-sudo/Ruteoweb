@@ -21,7 +21,8 @@ import {
   setDoc,
   serverTimestamp,
   collection,
-  getDocs
+  getDocs,
+  onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -43,6 +44,9 @@ const welcome = document.getElementById("welcome");
 // ✅ NUEVOS
 const driverSelect = document.getElementById("driverSelect");
 const turnoInfo = document.getElementById("turnoInfo");
+
+// ✅ NUEVO LISTADO
+const listaHoy = document.getElementById("lista-hoy");
 
 /*************************************************
  * UTILIDAD FECHA LOCAL (CLAVE 🔑)
@@ -291,6 +295,108 @@ function mostrarQR(docId) {
 }
 
 /*************************************************
+ * LISTADO EN VIVO: REGISTRADOS HOY (ORDEN LLEGADA)
+ *************************************************/
+let fichajesHoy = [];
+let despachosHoy = [];
+
+function getLlegadaDate(f) {
+  return (
+    f.horaLlegada?.toDate?.() ||
+    f.createdAt?.toDate?.() ||
+    new Date(0)
+  );
+}
+
+function renderListadoHoy() {
+  if (!listaHoy) return;
+
+  listaHoy.innerHTML = "";
+
+  const ordenados = [...fichajesHoy].sort((a, b) => getLlegadaDate(a) - getLlegadaDate(b));
+
+  if (!ordenados.length) {
+    const empty = document.createElement("li");
+    empty.style.fontSize = "13px";
+    empty.style.color = "#64748b";
+    empty.textContent = "Todavía no hay registrados hoy.";
+    listaHoy.appendChild(empty);
+    return;
+  }
+
+  for (const f of ordenados) {
+    const llegada = getLlegadaDate(f);
+    const hora = llegada.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+
+    // Match despacho (exacto + fallback normalizado)
+    const despacho = despachosHoy.find(d => d._id === f._id) ||
+      despachosHoy.find(d =>
+        String(d._id).toLowerCase().replace(/\s+/g, "_") === String(f._id).toLowerCase()
+      );
+
+    const estado = despacho ? "Despachado" : "Pendiente";
+    const badgeBg = despacho ? "#ecfdf5" : "#fff7ed";
+    const badgeBorder = despacho ? "#16a34a" : "#f59e0b";
+    const badgeText = despacho ? "#166534" : "#9a3412";
+
+    const li = document.createElement("li");
+    li.style.padding = "12px";
+    li.style.borderRadius = "12px";
+    li.style.background = "#ffffff";
+    li.style.boxShadow = "0 10px 22px rgba(15,23,42,0.12)";
+    li.style.display = "flex";
+    li.style.alignItems = "center";
+    li.style.justifyContent = "space-between";
+    li.style.gap = "12px";
+
+    li.innerHTML = `
+      <div>
+        <div style="font-weight:800;color:#0f172a;">${f.chofer || f.nombre_display || "-"}</div>
+        <div style="font-size:12px;color:#64748b;">🕒 Llegada: ${hora}</div>
+      </div>
+      <span style="
+        font-size:12px;
+        padding:6px 10px;
+        border-radius:999px;
+        background:${badgeBg};
+        border:1px solid ${badgeBorder};
+        color:${badgeText};
+        font-weight:800;
+      ">${estado}</span>
+    `;
+
+    listaHoy.appendChild(li);
+  }
+}
+
+function iniciarListadoHoyEnVivo() {
+  const hoy = hoyISO();
+
+  // Fichajes
+  onSnapshot(collection(db, "fichajes_diarios"), (snapshot) => {
+    fichajesHoy = [];
+    snapshot.forEach((d) => {
+      if (d.id.startsWith(hoy + "_")) {
+        fichajesHoy.push({ _id: d.id, ...d.data() });
+      }
+    });
+    renderListadoHoy();
+  });
+
+  // Despachos
+  onSnapshot(collection(db, "despachos_diarios"), (snapshot) => {
+    despachosHoy = [];
+    snapshot.forEach((d) => {
+      if (d.id.startsWith(hoy + "_")) {
+        despachosHoy.push({ _id: d.id, ...d.data() });
+      }
+    });
+    renderListadoHoy();
+  });
+}
+
+/*************************************************
  * INIT
  *************************************************/
 initChoferDropdown();
+iniciarListadoHoyEnVivo();
