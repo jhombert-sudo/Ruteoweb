@@ -21,10 +21,7 @@ import {
   setDoc,
   serverTimestamp,
   collection,
-  getDocs,
-  query,
-  where,
-  orderBy
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -87,19 +84,40 @@ async function initChoferDropdown() {
     return;
   }
 
-  // 1) Traer choferes activos
-  const qChoferes = query(
-    collection(db, "choferes"),
-    where("activo", "==", true),
-    orderBy("nombre_display")
-  );
+  // Estado inicial visible
+  driverSelect.innerHTML = `<option value="">Cargando...</option>`;
 
-  const snapChoferes = await getDocs(qChoferes);
-  const choferes = snapChoferes.docs.map(d => ({ id: d.id, ...d.data() }));
+  // 1) Traer choferes (SIN query para evitar índices)
+  let choferes = [];
+
+  try {
+    const snapChoferes = await getDocs(collection(db, "choferes"));
+    choferes = snapChoferes.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Filtrar activos (si no existe el campo, lo tomo como activo)
+    choferes = choferes.filter(c => c.activo !== false);
+
+    // Ordenar por nombre_display (o fallback al id)
+    choferes.sort((a, b) =>
+      String(a.nombre_display || a.id || "").localeCompare(
+        String(b.nombre_display || b.id || ""),
+        "es"
+      )
+    );
+  } catch (e) {
+    console.error("Error cargando choferes:", e);
+    driverSelect.innerHTML = `<option value="">❌ Error cargando choferes</option>`;
+    return;
+  }
+
+  if (!choferes.length) {
+    driverSelect.innerHTML = `<option value="">⚠️ No hay choferes cargados</option>`;
+    return;
+  }
 
   driverSelect.innerHTML =
     `<option value="">Seleccioná tu nombre</option>` +
-    choferes.map(c => `<option value="${c.id}">${c.nombre_display}</option>`).join("");
+    choferes.map(c => `<option value="${c.id}">${c.nombre_display || c.id}</option>`).join("");
 
   // 2) Si el celular ya está asignado -> bloquear selector
   const refDev = doc(db, "dispositivos", deviceId);
@@ -133,7 +151,7 @@ async function initChoferDropdown() {
     }
 
     driverId = elegido.id;
-    nombreChofer = elegido.nombre_display;
+    nombreChofer = elegido.nombre_display || elegido.id;
     tipoChofer = elegido.tipo || "NORMAL";
 
     welcome.innerText = `Bienvenido, ${nombreChofer}`;
@@ -227,7 +245,7 @@ async function registrarLlegadaFirestore() {
   await setDoc(ref, {
     chofer: nombreChofer,
     driverId,
-    tipo: tipoChofer,          // ✅ nuevo (no rompe)
+    tipo: tipoChofer,             // ✅ nuevo (no rompe)
     nombre_display: nombreChofer, // ✅ nuevo (no rompe)
     fecha: hoy,
     estado: "pendiente",
