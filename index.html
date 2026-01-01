@@ -58,14 +58,33 @@
       <!-- ✅ CONTENEDOR QR -->
       <div id="qr-container" style="margin-top:20px;text-align:center;"></div>
 
-      <!-- ✅ NUEVO: LISTADO REGISTRADOS HOY -->
-      <div id="hoy-box" style="margin-top:18px;text-align:left;">
-        <h3 style="margin:0 0 10px;color:#0f172a;">📋 Registrados hoy</h3>
-        <ul id="lista-hoy" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px;"></ul>
+      <!-- ✅ NUEVO: LISTADO HOY (PENDIENTES vs DESPACHADOS) -->
+      <div id="hoy-box" style="margin-top:18px;text-align:left;display:none;">
+        <h3 style="margin:0 0 10px;color:#0f172a;">📋 Estado del día</h3>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" id="hoy-grid">
+          <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:14px;padding:12px;">
+            <div style="font-weight:900;color:#9a3412;margin-bottom:8px;">🟡 Pendientes</div>
+            <ul id="lista-pendientes-chofer" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px;"></ul>
+          </div>
+
+          <div style="background:#ecfdf5;border:1px solid #bbf7d0;border-radius:14px;padding:12px;">
+            <div style="font-weight:900;color:#166534;margin-bottom:8px;">🟢 Despachados</div>
+            <ul id="lista-despachados-chofer" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px;"></ul>
+          </div>
+        </div>
+
         <p style="margin:10px 0 0;font-size:12px;color:#64748b;">
           Ordenado por hora de llegada.
         </p>
       </div>
+
+      <!-- ✅ Responsive: en celular se apila -->
+      <style>
+        @media (max-width: 520px) {
+          #hoy-grid { grid-template-columns: 1fr !important; }
+        }
+      </style>
 
       <div class="divider"></div>
 
