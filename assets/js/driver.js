@@ -45,8 +45,10 @@ const welcome = document.getElementById("welcome");
 const driverSelect = document.getElementById("driverSelect");
 const turnoInfo = document.getElementById("turnoInfo");
 
-// ✅ NUEVO LISTADO
-const listaHoy = document.getElementById("lista-hoy");
+// ✅ NUEVO: LISTADO (2 columnas)
+const hoyBox = document.getElementById("hoy-box");
+const listaPendientesChofer = document.getElementById("lista-pendientes-chofer");
+const listaDespachadosChofer = document.getElementById("lista-despachados-chofer");
 
 /*************************************************
  * UTILIDAD FECHA LOCAL (CLAVE 🔑)
@@ -139,11 +141,14 @@ async function initChoferDropdown() {
     if (turnoInfo) {
       turnoInfo.textContent = (tipoChofer === "TURBO") ? "🚀 TURBO (sin horario fijo)" : "";
     }
+
+    // ✅ Si ya tiene chofer asignado, vemos si ya fichó hoy y mostramos/ocultamos el bloque
+    await actualizarVisibilidadListado();
     return;
   }
 
   // 3) Si no está asignado -> permite elegir
-  driverSelect.addEventListener("change", () => {
+  driverSelect.addEventListener("change", async () => {
     const elegido = choferes.find(c => c.id === driverSelect.value);
     if (!elegido) {
       driverId = null;
@@ -151,6 +156,7 @@ async function initChoferDropdown() {
       tipoChofer = "NORMAL";
       if (turnoInfo) turnoInfo.textContent = "";
       welcome.innerText = "Bienvenido";
+      if (hoyBox) hoyBox.style.display = "none";
       return;
     }
 
@@ -162,6 +168,9 @@ async function initChoferDropdown() {
     if (turnoInfo) {
       turnoInfo.textContent = (tipoChofer === "TURBO") ? "🚀 TURBO (sin horario fijo)" : "";
     }
+
+    // ✅ Aún no fichó => oculto
+    if (hoyBox) hoyBox.style.display = "none";
   });
 }
 
@@ -238,6 +247,7 @@ async function registrarLlegadaFirestore() {
   if (snap.exists()) {
     alert("⚠️ Ya estás registrado hoy.");
     mostrarQR(docId);
+    await actualizarVisibilidadListado(); // ✅ muestra el bloque si corresponde
     return;
   }
 
@@ -261,6 +271,9 @@ async function registrarLlegadaFirestore() {
 
   alert("Llegada registrada correctamente ✅");
   mostrarQR(docId);
+
+  // ✅ Ahora sí: aparece el listado
+  await actualizarVisibilidadListado();
 }
 
 /*************************************************
@@ -295,7 +308,7 @@ function mostrarQR(docId) {
 }
 
 /*************************************************
- * LISTADO EN VIVO: REGISTRADOS HOY (ORDEN LLEGADA)
+ * LISTADO EN VIVO: ESTADO DEL DÍA (ORDEN LLEGADA)
  *************************************************/
 let fichajesHoy = [];
 let despachosHoy = [];
@@ -309,63 +322,82 @@ function getLlegadaDate(f) {
 }
 
 function renderListadoHoy() {
-  if (!listaHoy) return;
+  if (!listaPendientesChofer || !listaDespachadosChofer) return;
 
-  listaHoy.innerHTML = "";
+  listaPendientesChofer.innerHTML = "";
+  listaDespachadosChofer.innerHTML = "";
 
   const ordenados = [...fichajesHoy].sort((a, b) => getLlegadaDate(a) - getLlegadaDate(b));
 
-  if (!ordenados.length) {
-    const empty = document.createElement("li");
-    empty.style.fontSize = "13px";
-    empty.style.color = "#64748b";
-    empty.textContent = "Todavía no hay registrados hoy.";
-    listaHoy.appendChild(empty);
-    return;
-  }
+  const pendientes = [];
+  const despachados = [];
 
   for (const f of ordenados) {
-    const llegada = getLlegadaDate(f);
-    const hora = llegada.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
-
-    // Match despacho (exacto + fallback normalizado)
     const despacho = despachosHoy.find(d => d._id === f._id) ||
       despachosHoy.find(d =>
         String(d._id).toLowerCase().replace(/\s+/g, "_") === String(f._id).toLowerCase()
       );
 
-    const estado = despacho ? "Despachado" : "Pendiente";
-    const badgeBg = despacho ? "#ecfdf5" : "#fff7ed";
-    const badgeBorder = despacho ? "#16a34a" : "#f59e0b";
-    const badgeText = despacho ? "#166534" : "#9a3412";
+    if (despacho) despachados.push(f);
+    else pendientes.push(f);
+  }
+
+  function cardItem(f, estado) {
+    const llegada = getLlegadaDate(f);
+    const hora = llegada.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+
+    const badge = estado === "Despachado"
+      ? { bg: "#dcfce7", br: "#16a34a", tx: "#166534", label: "Despachado" }
+      : { bg: "#ffedd5", br: "#f59e0b", tx: "#9a3412", label: "Pendiente" };
 
     const li = document.createElement("li");
-    li.style.padding = "12px";
+    li.style.padding = "10px 12px";
     li.style.borderRadius = "12px";
     li.style.background = "#ffffff";
-    li.style.boxShadow = "0 10px 22px rgba(15,23,42,0.12)";
+    li.style.boxShadow = "0 8px 18px rgba(15,23,42,0.10)";
     li.style.display = "flex";
     li.style.alignItems = "center";
     li.style.justifyContent = "space-between";
-    li.style.gap = "12px";
+    li.style.gap = "10px";
 
     li.innerHTML = `
       <div>
-        <div style="font-weight:800;color:#0f172a;">${f.chofer || f.nombre_display || "-"}</div>
+        <div style="font-weight:900;color:#0f172a;">${f.chofer || f.nombre_display || "-"}</div>
         <div style="font-size:12px;color:#64748b;">🕒 Llegada: ${hora}</div>
       </div>
       <span style="
         font-size:12px;
         padding:6px 10px;
         border-radius:999px;
-        background:${badgeBg};
-        border:1px solid ${badgeBorder};
-        color:${badgeText};
-        font-weight:800;
-      ">${estado}</span>
+        background:${badge.bg};
+        border:1px solid ${badge.br};
+        color:${badge.tx};
+        font-weight:900;
+        white-space:nowrap;
+      ">${badge.label}</span>
     `;
 
-    listaHoy.appendChild(li);
+    return li;
+  }
+
+  if (!pendientes.length) {
+    const li = document.createElement("li");
+    li.style.fontSize = "13px";
+    li.style.color = "#9a3412";
+    li.textContent = "Sin pendientes.";
+    listaPendientesChofer.appendChild(li);
+  } else {
+    pendientes.forEach(f => listaPendientesChofer.appendChild(cardItem(f, "Pendiente")));
+  }
+
+  if (!despachados.length) {
+    const li = document.createElement("li");
+    li.style.fontSize = "13px";
+    li.style.color = "#166534";
+    li.textContent = "Sin despachados.";
+    listaDespachadosChofer.appendChild(li);
+  } else {
+    despachados.forEach(f => listaDespachadosChofer.appendChild(cardItem(f, "Despachado")));
   }
 }
 
@@ -396,7 +428,22 @@ function iniciarListadoHoyEnVivo() {
 }
 
 /*************************************************
+ * MOSTRAR/OCULTAR BLOQUE SOLO SI ESTE CHOFER FICHÓ HOY
+ *************************************************/
+async function actualizarVisibilidadListado() {
+  if (!hoyBox || !driverId) return;
+
+  const hoy = hoyISO();
+  const docId = `${hoy}_${driverId}`;
+  const ref = doc(db, "fichajes_diarios", docId);
+  const snap = await getDoc(ref);
+
+  hoyBox.style.display = snap.exists() ? "block" : "none";
+}
+
+/*************************************************
  * INIT
  *************************************************/
 initChoferDropdown();
 iniciarListadoHoyEnVivo();
+actualizarVisibilidadListado();
