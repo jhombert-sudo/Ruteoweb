@@ -277,3 +277,51 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================
+   ✅ NUEVO (NO ROMPE): Layout pro chofer + Estado del día
+   ========================================================= */
+.driver-layout{
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.hoy-side{
+  background: white;
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.20);
+}
+
+/* QR un poco más prolijo */
+#qr-container img{
+  max-width: 220px;
+  width: 100%;
+  height: auto;
+}
+
+/* Cuando aparece el estado del día, achicamos el QR para que no quede eterno */
+#hoy-box:not([style*="display:none"]) ~ .divider,
+#hoy-box:not([style*="display: none"]) ~ .divider{
+  /* (no afecta nada si no existe el selector en tu estructura actual) */
+}
+
+#hoy-box:not([style*="display:none"]) ~ #qr-container img,
+#hoy-box:not([style*="display: none"]) ~ #qr-container img{
+  max-width: 180px;
+}
+
+/* Responsive: se apila, y el grid del estado pasa a 1 columna */
+@media (max-width: 1024px){
+  .driver-layout{
+    grid-template-columns: 1fr;
+  }
+  #hoy-grid{
+    grid-template-columns: 1fr !important;
+  }
+}
