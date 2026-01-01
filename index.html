@@ -17,7 +17,6 @@
   <!-- ================= HEADER ================= -->
   <header class="topbar">
     <div class="logo" style="display:flex;align-items:center;gap:10px;">
-      <!-- ✅ LOGO NUEVO (NO BORRA NADA) -->
       <img src="img/logo.jpeg" alt="Logo Despachos" style="height:32px;width:auto;">
       🚚 Despachos
     </div>
@@ -26,43 +25,59 @@
 
   <!-- ================= FICHAJE CHOFER ================= -->
   <main class="wrapper">
-    <div class="card">
 
-      <h1 id="welcome">Bienvenido</h1>
+    <!-- ✅ NUEVO CONTENEDOR PARA LAYOUT PRO (NO ROMPE NADA) -->
+    <div class="driver-layout">
 
-      <p class="subtitle">
-        Tocá el botón para registrar tu llegada al centro de despacho.
-      </p>
+      <!-- ✅ TU CARD IGUAL -->
+      <div class="card">
 
-      <!-- ✅ NUEVO: SELECTOR DE CHOFER -->
-      <div style="text-align:left;margin:14px 0 18px;">
-        <label for="driverSelect" style="font-weight:700;color:#0f172a;display:block;margin-bottom:6px;">
-          Seleccioná tu nombre
-        </label>
+        <h1 id="welcome">Bienvenido</h1>
 
-        <select id="driverSelect" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb;">
-          <option value="">Cargando...</option>
-        </select>
+        <p class="subtitle">
+          Tocá el botón para registrar tu llegada al centro de despacho.
+        </p>
 
-        <p id="turnoInfo" style="margin:10px 0 0;font-size:13px;color:#475569;"></p>
+        <!-- ✅ SELECTOR DE CHOFER -->
+        <div style="text-align:left;margin:14px 0 18px;">
+          <label for="driverSelect" style="font-weight:700;color:#0f172a;display:block;margin-bottom:6px;">
+            Seleccioná tu nombre
+          </label>
+
+          <select id="driverSelect" style="width:100%;padding:12px;border-radius:12px;border:1px solid #e5e7eb;">
+            <option value="">Cargando...</option>
+          </select>
+
+          <p id="turnoInfo" style="margin:10px 0 0;font-size:13px;color:#475569;"></p>
+        </div>
+
+        <button id="btnFichar" class="primary-btn">
+          Registrar llegada
+        </button>
+
+        <div id="loader" class="loader hidden">
+          ⏳ Esperando confirmación de llegada...
+        </div>
+
+        <!-- ✅ CONTENEDOR QR -->
+        <div id="qr-container" style="margin-top:20px;text-align:center;"></div>
+
+        <div class="divider"></div>
+
+        <div class="section">
+          <h3>Ubicación</h3>
+          <p>
+            Centro de Despacho BIDCOM, Estomba 522, Buenos Aires.
+          </p>
+        </div>
+
       </div>
 
-      <button id="btnFichar" class="primary-btn">
-        Registrar llegada
-      </button>
-
-      <div id="loader" class="loader hidden">
-        ⏳ Esperando confirmación de llegada...
-      </div>
-
-      <!-- ✅ CONTENEDOR QR -->
-      <div id="qr-container" style="margin-top:20px;text-align:center;"></div>
-
-      <!-- ✅ NUEVO: LISTADO HOY (PENDIENTES vs DESPACHADOS) -->
-      <div id="hoy-box" style="margin-top:18px;text-align:left;display:none;">
+      <!-- ✅ AHORA EL ESTADO DEL DÍA VA AL COSTADO (desktop) -->
+      <div id="hoy-box" class="hoy-side" style="display:none;">
         <h3 style="margin:0 0 10px;color:#0f172a;">📋 Estado del día</h3>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" id="hoy-grid">
+        <div id="hoy-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:14px;padding:12px;">
             <div style="font-weight:900;color:#9a3412;margin-bottom:8px;">🟡 Pendientes</div>
             <ul id="lista-pendientes-chofer" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px;"></ul>
@@ -79,22 +94,6 @@
         </p>
       </div>
 
-      <!-- ✅ Responsive: en celular se apila -->
-      <style>
-        @media (max-width: 520px) {
-          #hoy-grid { grid-template-columns: 1fr !important; }
-        }
-      </style>
-
-      <div class="divider"></div>
-
-      <div class="section">
-        <h3>Ubicación</h3>
-        <p>
-          Centro de Despacho BIDCOM, Estomba 522, Buenos Aires.
-        </p>
-      </div>
-
     </div>
   </main>
 
@@ -103,10 +102,8 @@
 
     <h2 class="panel-title">Panel del día</h2>
 
-    <!-- 🔥 LAYOUT PRINCIPAL -->
     <div class="panel-layout">
 
-      <!-- IZQUIERDA -->
       <div class="panel-main">
 
         <div id="qr-despacho" style="margin:20px 0; display:none;">
@@ -130,7 +127,6 @@
         </div>
       </div>
 
-      <!-- DERECHA -->
       <aside class="panel-side">
         <div class="panel-resumen">
 
@@ -154,12 +150,40 @@
 
     </div>
 
-    <!-- FIRMA -->
     <div class="panel-signature">
       <strong>JUCA®</strong>
     </div>
 
   </section>
+
+  <!-- ✅ ESTILO SOLO PARA EL LAYOUT (después lo pasamos a main.css) -->
+  <style>
+    .driver-layout{
+      width: 100%;
+      max-width: 980px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .hoy-side{
+      background: white;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 40px 80px rgba(0,0,0,0.20);
+    }
+
+    @media (max-width: 1024px){
+      .driver-layout{
+        grid-template-columns: 1fr;
+      }
+      #hoy-grid{
+        grid-template-columns: 1fr !important;
+      }
+    }
+  </style>
 
   <!-- ================= SCRIPTS ================= -->
   <script type="module" src="assets/js/driver.js"></script>
