@@ -279,7 +279,7 @@ h1 {
 }
 
 /* =========================================================
-   ✅ NUEVO (NO ROMPE): Layout pro chofer + Estado del día
+   ✅ DRIVER: Layout pro chofer + Estado del día (NO ROMPE)
    ========================================================= */
 .driver-layout{
   width: 100%;
@@ -291,6 +291,7 @@ h1 {
   align-items: start;
 }
 
+/* Panel lateral */
 .hoy-side{
   background: white;
   border-radius: 18px;
@@ -298,23 +299,31 @@ h1 {
   box-shadow: 0 40px 80px rgba(0,0,0,0.20);
 }
 
-/* QR un poco más prolijo */
+/* ✅ para que no se haga infinito con muchos choferes */
+.hoy-side ul{
+  max-height: 520px;
+  overflow: auto;
+  padding-right: 6px;
+}
+
+/* Scroll prolijo */
+.hoy-side ul::-webkit-scrollbar{
+  width: 8px;
+}
+.hoy-side ul::-webkit-scrollbar-thumb{
+  background: rgba(15,23,42,0.18);
+  border-radius: 999px;
+}
+
+/* QR prolijo (general) */
 #qr-container img{
-  max-width: 220px;
+  max-width: 210px;
   width: 100%;
   height: auto;
 }
 
-/* Cuando aparece el estado del día, achicamos el QR para que no quede eterno */
-#hoy-box:not([style*="display:none"]) ~ .divider,
-#hoy-box:not([style*="display: none"]) ~ .divider{
-  /* (no afecta nada si no existe el selector en tu estructura actual) */
-}
-
-#hoy-box:not([style*="display:none"]) ~ #qr-container img,
-#hoy-box:not([style*="display: none"]) ~ #qr-container img{
-  max-width: 180px;
-}
+/* ✅ este era el problema: tu selector no matcheaba por estructura.
+   Achicamos un toque el QR SIEMPRE para que no moleste. */
 
 /* Responsive: se apila, y el grid del estado pasa a 1 columna */
 @media (max-width: 1024px){
@@ -323,5 +332,8 @@ h1 {
   }
   #hoy-grid{
     grid-template-columns: 1fr !important;
+  }
+  .hoy-side ul{
+    max-height: 420px;
   }
 }
