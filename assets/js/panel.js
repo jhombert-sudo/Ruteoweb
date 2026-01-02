@@ -47,7 +47,7 @@ const totalDespachados = document.getElementById("total-despachados");
  * ✅ NUEVOS ELEMENTOS (SE CREAN SI NO EXISTEN)
  * - Citados hoy
  * - % asistencia (y ratio)
- * - Resumen contextual arriba de las listas
+ * NOTA: quitamos el resumen contextual de arriba (porque ya está en la derecha)
  *************************************************/
 const panelResumen = document.querySelector(".panel-resumen");
 let totalCitados = document.getElementById("total-citados");
@@ -55,7 +55,11 @@ let asistenciaRatio = document.getElementById("asistencia-ratio");
 let asistenciaPct = document.getElementById("asistencia-pct");
 
 function ensurePanelExtrasUI_() {
-  // 1) Card "Citados hoy" en el resumen (sin tocar lo que ya existe)
+  // ✅ Si existía el resumen contextual de arriba (de alguna versión), lo sacamos
+  const ctx = document.getElementById("resumen-contexto-dia");
+  if (ctx) ctx.remove();
+
+  // Card "Citados hoy" (sin tocar lo que ya existe)
   if (panelResumen && !totalCitados) {
     const item = document.createElement("div");
     item.className = "resumen-item";
@@ -67,53 +71,13 @@ function ensurePanelExtrasUI_() {
         · <span id="asistencia-pct">0%</span>
       </div>
     `;
-    // Insertar al principio para que se vea primero
     panelResumen.insertBefore(item, panelResumen.firstChild);
 
     totalCitados = document.getElementById("total-citados");
     asistenciaRatio = document.getElementById("asistencia-ratio");
     asistenciaPct = document.getElementById("asistencia-pct");
   }
-
-  // 2) Resumen contextual arriba de las listas (solo si existe estructura)
-  const panelMain = document.querySelector(".panel-main");
-  const panelTablas = document.querySelector(".panel-tablas");
-  if (panelMain && panelTablas && !document.getElementById("resumen-contexto-dia")) {
-    const box = document.createElement("div");
-    box.id = "resumen-contexto-dia";
-    box.style.cssText = `
-      background:#ffffff;
-      border-radius:18px;
-      padding:14px 16px;
-      box-shadow: 0 18px 40px rgba(15,23,42,0.12);
-      display:flex;
-      flex-wrap:wrap;
-      gap:12px;
-      align-items:center;
-      justify-content:flex-start;
-      font-weight:900;
-      color:#0f172a;
-    `;
-
-    box.innerHTML = `
-      <span style="display:inline-flex;gap:8px;align-items:center;">
-        📅 <span>Citados:</span> <span id="ctx-citados">0</span>
-      </span>
-      <span style="opacity:.35;">|</span>
-      <span style="display:inline-flex;gap:8px;align-items:center;">
-        🏢 <span>En empresa:</span> <span id="ctx-empresa">0</span>
-      </span>
-      <span style="opacity:.35;">|</span>
-      <span style="display:inline-flex;gap:8px;align-items:center;">
-        🚚 <span>Despachados:</span> <span id="ctx-despachados">0</span>
-      </span>
-    `;
-
-    panelMain.insertBefore(box, panelTablas);
-  }
 }
-
-// Crear UI extra apenas entra al panel
 ensurePanelExtrasUI_();
 
 /*************************************************
@@ -141,12 +105,132 @@ function calcularAsistenciaPct_(activos, citados) {
   return Math.round((activos / citados) * 100);
 }
 
+function toDateSafe_(v) {
+  if (!v) return null;
+  if (typeof v?.toDate === "function") return v.toDate();
+  if (v instanceof Date) return v;
+  if (typeof v === "number") return new Date(v);
+  return null;
+}
+
+function fmtHora_(d) {
+  if (!d || !(d instanceof Date) || isNaN(d.getTime())) return "--:--";
+  return d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function normalizeId_(id) {
+  return String(id || "").toLowerCase().replace(/\s+/g, "_");
+}
+
+/*************************************************
+ * Puntualidad (panel)
+ *************************************************/
+const ON_TIME_GRACE_MIN = 5;
+
+function parseHHMMToMinutes_(hhmm) {
+  const m = String(hhmm || "").match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const hh = Number(m[1]);
+  const mm = Number(m[2]);
+  if (Number.isNaN(hh) || Number.isNaN(mm)) return null;
+  return hh * 60 + mm;
+}
+function dateToMinutes_(d) {
+  return d.getHours() * 60 + d.getMinutes();
+}
+function calcPuntualidad_(horaCitadaHHMM, llegadaDate) {
+  const citaMin = parseHHMMToMinutes_(horaCitadaHHMM);
+  if (citaMin == null || !llegadaDate) return null;
+
+  const llegadaMin = dateToMinutes_(llegadaDate);
+  const delta = llegadaMin - citaMin;
+
+  if (delta <= 0) return "ANTES";
+  if (delta <= ON_TIME_GRACE_MIN) return "A TIEMPO";
+  return "TARDE";
+}
+
+/*************************************************
+ * Colores por demora (SOLO PENDIENTES)
+ * Reglas JUCA:
+ * 🟢 < 10 min (normal)
+ * 🟡 30–40 min (retardo)
+ * 🔴 > 60 min (demora)
+ * (los demás rangos quedan con el estilo naranja default)
+ *************************************************/
+function stylePendientePorMin_(li, minEspera) {
+  if (!li) return;
+
+  // default: no tocamos estilo (queda naranja por CSS)
+  let bg = null, br = null, pill = null, txt = null, note = "";
+
+  if (minEspera < 10) {
+    // 🟢
+    bg = "#ecfdf5";
+    br = "#16a34a";
+    pill = "#dcfce7";
+    txt = "#166534";
+    note = "🟢 Normal";
+  } else if (minEspera >= 30 && minEspera <= 40) {
+    // 🟡
+    bg = "#fffbeb";
+    br = "#f59e0b";
+    pill = "#ffedd5";
+    txt = "#9a3412";
+    note = "🟡 Retardo";
+  } else if (minEspera > 60) {
+    // 🔴
+    bg = "#fef2f2";
+    br = "#ef4444";
+    pill = "#fee2e2";
+    txt = "#991b1b";
+    note = "🔴 Demora";
+  } else {
+    return; // no tocar
+  }
+
+  li.style.background = bg;
+  li.style.borderLeft = `6px solid ${br}`;
+
+  // pintamos cualquier badge pendiente si existe
+  const badge = li.querySelector(".badge.pendiente");
+  if (badge) {
+    badge.style.display = "inline-block";
+    badge.style.marginTop = "6px";
+    badge.style.padding = "6px 10px";
+    badge.style.borderRadius = "999px";
+    badge.style.background = pill;
+    badge.style.border = `1px solid ${br}`;
+    badge.style.color = txt;
+    badge.style.fontWeight = "900";
+  }
+
+  // agregamos nota de estado si no está
+  const existing = li.querySelector('[data-demora-note="1"]');
+  if (!existing) {
+    const div = document.createElement("div");
+    div.dataset.demoraNote = "1";
+    div.style.marginTop = "6px";
+    div.style.fontSize = "12px";
+    div.style.fontWeight = "900";
+    div.style.color = txt;
+    div.textContent = note;
+    li.appendChild(div);
+  } else {
+    existing.style.color = txt;
+    existing.textContent = note;
+  }
+}
+
 /*************************************************
  * ESTADO GLOBAL
  *************************************************/
 let fichajesHoy = [];
 let despachosHoy = [];
-let citasHoy = []; // ✅ NUEVO: para "Citados hoy"
+let citasHoy = []; // para "Citados hoy"
+
+// fallback estable por si no viene horaLlegada/createdAt
+const llegadaFallback = new Map();
 
 /*************************************************
  * ESCUCHAR CITAS (CITADOS HOY)
@@ -204,7 +288,31 @@ onSnapshot(collection(db, "despachos_diarios"), (snapshot) => {
 });
 
 /*************************************************
+ * Helpers: llegada + cita por docId
+ *************************************************/
+function getLlegada_(f) {
+  const d = toDateSafe_(f?.horaLlegada) || toDateSafe_(f?.createdAt);
+  if (d) return d;
+
+  const id = String(f?._id || "");
+  if (!llegadaFallback.has(id)) llegadaFallback.set(id, new Date());
+  return llegadaFallback.get(id);
+}
+
+function findCitaByDocId_(citasMap, docId, driverId, hoy) {
+  if (docId && citasMap.has(docId)) return citasMap.get(docId);
+  if (driverId) {
+    const tryId = `${hoy}_${driverId}`;
+    if (citasMap.has(tryId)) return citasMap.get(tryId);
+  }
+  return null;
+}
+
+/*************************************************
  * RENDER PRINCIPAL
+ * - Orden por llegada (primero arriba)
+ * - Muestra hora llegada + hora citada/TURBO + puntualidad
+ * - Colorea pendientes por minutos (según reglas JUCA)
  *************************************************/
 function render() {
   if (!listaPendientes || !listaDespachados) return;
@@ -212,38 +320,63 @@ function render() {
   listaPendientes.innerHTML = "";
   listaDespachados.innerHTML = "";
 
+  const hoy = hoyISO();
+
+  // Map de despachos por id normalizado
+  const despachosMap = new Map();
+  for (const d of despachosHoy) {
+    despachosMap.set(normalizeId_(d._id), d);
+  }
+
+  // Map de citas por docId
+  const citasMap = new Map();
+  for (const c of citasHoy) {
+    if (c?._id) citasMap.set(String(c._id), c);
+  }
+
+  // Orden por llegada (primero arriba)
+  const fichajesOrdenados = [...fichajesHoy].sort((a, b) => {
+    return getLlegada_(a).getTime() - getLlegada_(b).getTime();
+  });
+
   let pendientes = 0;
   let despachados = 0;
 
-  fichajesHoy.forEach((f) => {
-    // 🔑 MATCH CORRECTO (normalizando solo el despacho) - se mantiene tu lógica
-    const despacho = despachosHoy.find(d =>
-      String(d._id || "")
-        .toLowerCase()
-        .replace(/\s+/g, "_") === String(f._id || "")
-    );
+  for (const f of fichajesOrdenados) {
+    const docId = String(f?._id || "");
+    const driverId = f?.driverId || null;
 
-    // ⏱ llegada segura
-    const llegada =
-      f.horaLlegada?.toDate?.() ||
-      f.createdAt?.toDate?.() ||
-      new Date();
+    const despacho = despachosMap.get(normalizeId_(docId));
+    const llegada = getLlegada_(f);
+
+    const cita = findCitaByDocId_(citasMap, docId, driverId, hoy);
+    const tipoCita = String(cita?.tipo || "").toUpperCase();
+    const horaCitada = cita?.hora_citada || null;
+
+    const llegadaTxt = fmtHora_(llegada);
+
+    let lineaCita = "";
+    if (tipoCita === "TURBO") {
+      lineaCita = `🕒 TURBO · Sin horario fijo`;
+    } else if (horaCitada) {
+      const puntual = calcPuntualidad_(horaCitada, llegada);
+      lineaCita = `🕒 Citado: ${horaCitada} · Llegó: ${llegadaTxt}${puntual ? ` (${puntual})` : ""}`;
+    } else {
+      lineaCita = `🕒 Citado: — · Llegó: ${llegadaTxt}`;
+    }
 
     if (despacho) {
       despachados++;
 
-      // 🕒 salida real si existe, fallback visual si no
-      const salida =
-        despacho.updatedAt?.toDate?.() ||
-        new Date();
-
+      const salida = toDateSafe_(despacho.updatedAt) || new Date();
       const duracion = salida - llegada;
 
       const li = document.createElement("li");
       li.className = "item despachado";
       li.innerHTML = `
         <strong>${f.chofer}</strong><br>
-        🕒 Salida: ${salida.toLocaleTimeString()}<br>
+        ${lineaCita}<br>
+        🕒 Salida: ${fmtHora_(salida)}<br>
         ⏱ Espera: ${formatearTiempo(duracion)}<br>
         📦 Paquetes: ${despacho.cantidad_comprobantes ?? "-"}<br>
         📍 ${Array.isArray(despacho.localidades) ? despacho.localidades.join(", ") : "-"}
@@ -252,25 +385,31 @@ function render() {
     } else {
       pendientes++;
 
-      const espera = new Date() - llegada;
+      const esperaMs = new Date() - llegada;
+      const esperaMin = Math.floor(esperaMs / 60000);
 
       const li = document.createElement("li");
       li.className = "item pendiente";
       li.innerHTML = `
         <strong>${f.chofer}</strong><br>
-        ⏱ Espera: ${formatearTiempo(espera)}<br>
+        ${lineaCita}<br>
+        ⏱ Espera: ${formatearTiempo(esperaMs)}<br>
         <span class="badge pendiente">Pendiente</span>
       `;
+
+      // ✅ color por minutos (según reglas)
+      stylePendientePorMin_(li, esperaMin);
+
       listaPendientes.appendChild(li);
     }
-  });
+  }
 
-  // ✅ KPIs EXISTENTES (igual que antes)
+  // ✅ KPIs EXISTENTES
   if (totalPendientes) totalPendientes.textContent = pendientes;
   if (totalDespachados) totalDespachados.textContent = despachados;
-  if (totalActivos) totalActivos.textContent = pendientes + despachados; // activos = fichados hoy
+  if (totalActivos) totalActivos.textContent = pendientes + despachados;
 
-  // ✅ NUEVOS KPIs (Citados + % asistencia)
+  // ✅ KPIs NUEVOS (Citados + % asistencia)
   const citados = Array.isArray(citasHoy) ? citasHoy.length : 0;
   const activos = pendientes + despachados;
   const pct = calcularAsistenciaPct_(activos, citados);
@@ -278,15 +417,6 @@ function render() {
   if (totalCitados) totalCitados.textContent = citados;
   if (asistenciaRatio) asistenciaRatio.textContent = `${activos}/${citados}`;
   if (asistenciaPct) asistenciaPct.textContent = `${pct}%`;
-
-  // ✅ Resumen contextual arriba de las listas
-  const ctxCit = document.getElementById("ctx-citados");
-  const ctxEmp = document.getElementById("ctx-empresa");
-  const ctxDes = document.getElementById("ctx-despachados");
-
-  if (ctxCit) ctxCit.textContent = citados;
-  if (ctxEmp) ctxEmp.textContent = activos;
-  if (ctxDes) ctxDes.textContent = despachados;
 }
 
 /*************************************************
@@ -305,6 +435,7 @@ resetBtn.onclick = () => {
   fichajesHoy = [];
   despachosHoy = [];
   citasHoy = [];
+  llegadaFallback.clear();
   render();
 };
 panelSection.appendChild(resetBtn);
