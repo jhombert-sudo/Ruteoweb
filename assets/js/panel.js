@@ -44,6 +44,79 @@ const totalPendientes = document.getElementById("total-pendientes");
 const totalDespachados = document.getElementById("total-despachados");
 
 /*************************************************
+ * ✅ NUEVOS ELEMENTOS (SE CREAN SI NO EXISTEN)
+ * - Citados hoy
+ * - % asistencia (y ratio)
+ * - Resumen contextual arriba de las listas
+ *************************************************/
+const panelResumen = document.querySelector(".panel-resumen");
+let totalCitados = document.getElementById("total-citados");
+let asistenciaRatio = document.getElementById("asistencia-ratio");
+let asistenciaPct = document.getElementById("asistencia-pct");
+
+function ensurePanelExtrasUI_() {
+  // 1) Card "Citados hoy" en el resumen (sin tocar lo que ya existe)
+  if (panelResumen && !totalCitados) {
+    const item = document.createElement("div");
+    item.className = "resumen-item";
+    item.innerHTML = `
+      <span class="resumen-label">Citados hoy</span>
+      <span id="total-citados" class="resumen-value">0</span>
+      <div style="margin-top:10px;font-size:12px;color:#64748b;font-weight:800;">
+        Asistencia: <span id="asistencia-ratio">0/0</span>
+        · <span id="asistencia-pct">0%</span>
+      </div>
+    `;
+    // Insertar al principio para que se vea primero
+    panelResumen.insertBefore(item, panelResumen.firstChild);
+
+    totalCitados = document.getElementById("total-citados");
+    asistenciaRatio = document.getElementById("asistencia-ratio");
+    asistenciaPct = document.getElementById("asistencia-pct");
+  }
+
+  // 2) Resumen contextual arriba de las listas (solo si existe estructura)
+  const panelMain = document.querySelector(".panel-main");
+  const panelTablas = document.querySelector(".panel-tablas");
+  if (panelMain && panelTablas && !document.getElementById("resumen-contexto-dia")) {
+    const box = document.createElement("div");
+    box.id = "resumen-contexto-dia";
+    box.style.cssText = `
+      background:#ffffff;
+      border-radius:18px;
+      padding:14px 16px;
+      box-shadow: 0 18px 40px rgba(15,23,42,0.12);
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      align-items:center;
+      justify-content:flex-start;
+      font-weight:900;
+      color:#0f172a;
+    `;
+
+    box.innerHTML = `
+      <span style="display:inline-flex;gap:8px;align-items:center;">
+        📅 <span>Citados:</span> <span id="ctx-citados">0</span>
+      </span>
+      <span style="opacity:.35;">|</span>
+      <span style="display:inline-flex;gap:8px;align-items:center;">
+        🏢 <span>En empresa:</span> <span id="ctx-empresa">0</span>
+      </span>
+      <span style="opacity:.35;">|</span>
+      <span style="display:inline-flex;gap:8px;align-items:center;">
+        🚚 <span>Despachados:</span> <span id="ctx-despachados">0</span>
+      </span>
+    `;
+
+    panelMain.insertBefore(box, panelTablas);
+  }
+}
+
+// Crear UI extra apenas entra al panel
+ensurePanelExtrasUI_();
+
+/*************************************************
  * UTILIDADES
  *************************************************/
 function hoyISO() {
@@ -63,11 +136,40 @@ function formatearTiempo(ms) {
   return `${h}:${m}:${sec}`;
 }
 
+function calcularAsistenciaPct_(activos, citados) {
+  if (!citados || citados <= 0) return 0;
+  return Math.round((activos / citados) * 100);
+}
+
 /*************************************************
  * ESTADO GLOBAL
  *************************************************/
 let fichajesHoy = [];
 let despachosHoy = [];
+let citasHoy = []; // ✅ NUEVO: para "Citados hoy"
+
+/*************************************************
+ * ESCUCHAR CITAS (CITADOS HOY)
+ *************************************************/
+onSnapshot(collection(db, "citas_diarias"), (snapshot) => {
+  const hoy = hoyISO();
+  citasHoy = [];
+
+  snapshot.forEach((docu) => {
+    // DocID: YYYY-MM-DD_driverId (como definiste)
+    if (docu.id.startsWith(hoy + "_")) {
+      citasHoy.push({ _id: docu.id, ...docu.data() });
+      return;
+    }
+    // Fallback por si alguna vez cambia el ID pero mantiene campo fecha
+    const data = docu.data();
+    if (data?.fecha === hoy) {
+      citasHoy.push({ _id: docu.id, ...data });
+    }
+  });
+
+  render();
+});
 
 /*************************************************
  * ESCUCHAR FICHAJES
@@ -76,9 +178,9 @@ onSnapshot(collection(db, "fichajes_diarios"), (snapshot) => {
   const hoy = hoyISO();
   fichajesHoy = [];
 
-  snapshot.forEach((doc) => {
-    if (doc.id.startsWith(hoy + "_")) {
-      fichajesHoy.push({ _id: doc.id, ...doc.data() });
+  snapshot.forEach((docu) => {
+    if (docu.id.startsWith(hoy + "_")) {
+      fichajesHoy.push({ _id: docu.id, ...docu.data() });
     }
   });
 
@@ -92,9 +194,9 @@ onSnapshot(collection(db, "despachos_diarios"), (snapshot) => {
   const hoy = hoyISO();
   despachosHoy = [];
 
-  snapshot.forEach((doc) => {
-    if (doc.id.startsWith(hoy + "_")) {
-      despachosHoy.push({ _id: doc.id, ...doc.data() });
+  snapshot.forEach((docu) => {
+    if (docu.id.startsWith(hoy + "_")) {
+      despachosHoy.push({ _id: docu.id, ...docu.data() });
     }
   });
 
@@ -105,6 +207,8 @@ onSnapshot(collection(db, "despachos_diarios"), (snapshot) => {
  * RENDER PRINCIPAL
  *************************************************/
 function render() {
+  if (!listaPendientes || !listaDespachados) return;
+
   listaPendientes.innerHTML = "";
   listaDespachados.innerHTML = "";
 
@@ -112,10 +216,11 @@ function render() {
   let despachados = 0;
 
   fichajesHoy.forEach((f) => {
-
-    // 🔑 MATCH CORRECTO (normalizando solo el despacho)
+    // 🔑 MATCH CORRECTO (normalizando solo el despacho) - se mantiene tu lógica
     const despacho = despachosHoy.find(d =>
-      d._id.toLowerCase().replace(/\s+/g, "_") === f._id
+      String(d._id || "")
+        .toLowerCase()
+        .replace(/\s+/g, "_") === String(f._id || "")
     );
 
     // ⏱ llegada segura
@@ -144,7 +249,6 @@ function render() {
         📍 ${Array.isArray(despacho.localidades) ? despacho.localidades.join(", ") : "-"}
       `;
       listaDespachados.appendChild(li);
-
     } else {
       pendientes++;
 
@@ -161,9 +265,28 @@ function render() {
     }
   });
 
-  totalPendientes.textContent = pendientes;
-  totalDespachados.textContent = despachados;
-  totalActivos.textContent = pendientes + despachados;
+  // ✅ KPIs EXISTENTES (igual que antes)
+  if (totalPendientes) totalPendientes.textContent = pendientes;
+  if (totalDespachados) totalDespachados.textContent = despachados;
+  if (totalActivos) totalActivos.textContent = pendientes + despachados; // activos = fichados hoy
+
+  // ✅ NUEVOS KPIs (Citados + % asistencia)
+  const citados = Array.isArray(citasHoy) ? citasHoy.length : 0;
+  const activos = pendientes + despachados;
+  const pct = calcularAsistenciaPct_(activos, citados);
+
+  if (totalCitados) totalCitados.textContent = citados;
+  if (asistenciaRatio) asistenciaRatio.textContent = `${activos}/${citados}`;
+  if (asistenciaPct) asistenciaPct.textContent = `${pct}%`;
+
+  // ✅ Resumen contextual arriba de las listas
+  const ctxCit = document.getElementById("ctx-citados");
+  const ctxEmp = document.getElementById("ctx-empresa");
+  const ctxDes = document.getElementById("ctx-despachados");
+
+  if (ctxCit) ctxCit.textContent = citados;
+  if (ctxEmp) ctxEmp.textContent = activos;
+  if (ctxDes) ctxDes.textContent = despachados;
 }
 
 /*************************************************
@@ -181,6 +304,7 @@ resetBtn.onclick = () => {
   if (!confirm("Resetear vista del panel?")) return;
   fichajesHoy = [];
   despachosHoy = [];
+  citasHoy = [];
   render();
 };
 panelSection.appendChild(resetBtn);
