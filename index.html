@@ -59,8 +59,19 @@
           ⏳ Esperando confirmación de llegada...
         </div>
 
-        <!-- ✅ CONTENEDOR QR -->
-        <div id="qr-container" style="margin-top:20px;text-align:center;"></div>
+        <!-- ✅ NUEVO: MI HORARIO (PERSONAL - solo para ese chofer) -->
+        <div id="mi-horario-box" style="display:none;margin-top:14px;text-align:left;"></div>
+
+        <!-- ✅ NUEVO: BOTÓN QR PLEGABLE (arranca oculto; driver.js lo muestra cuando corresponda) -->
+        <button
+          id="btnToggleQR"
+          type="button"
+          style="display:none;margin-top:12px;width:100%;border:1px solid #e5e7eb;background:#fff;border-radius:12px;padding:12px;font-weight:800;cursor:pointer;">
+          Mostrar QR
+        </button>
+
+        <!-- ✅ CONTENEDOR QR (AHORA PLEGABLE: arranca oculto) -->
+        <div id="qr-container" style="margin-top:14px;text-align:center;display:none;"></div>
 
         <div class="divider"></div>
 
