@@ -32,6 +32,27 @@
       <!-- ✅ TU CARD IGUAL -->
       <div class="card">
 
+        <!-- ✅ NUEVO: BANNER ARRIBA (HORA CITADA + ESTADO) - arranca oculto -->
+        <!-- driver.js lo va a completar (hora, estado, diferencia) -->
+        <div
+          id="cita-banner"
+          class="cita-banner"
+          style="display:none;"
+          role="status"
+          aria-live="polite"
+        >
+          <div class="cita-banner__top">
+            <span class="cita-badge" id="cita-badge">⏱️</span>
+            <span class="cita-title" id="cita-title">Hora citada</span>
+            <span class="cita-hour" id="cita-hour">--:--</span>
+          </div>
+
+          <div class="cita-banner__bottom">
+            <span class="cita-state" id="cita-state">—</span>
+            <span class="cita-delta" id="cita-delta"></span>
+          </div>
+        </div>
+
         <h1 id="welcome">Bienvenido</h1>
 
         <p class="subtitle">
@@ -60,7 +81,8 @@
         </div>
 
         <!-- ✅ NUEVO: MI HORARIO (PERSONAL - solo para ese chofer) -->
-        <div id="mi-horario-box" style="display:none;margin-top:14px;text-align:left;"></div>
+        <!-- (NO BORRO NADA: lo dejamos por compatibilidad; si después no lo usamos, queda oculto) -->
+        <div id="mi-horario-box" style="display:none;margin-top:10px;text-align:left;"></div>
 
         <!-- ✅ NUEVO: BOTÓN QR PLEGABLE (arranca oculto; driver.js lo muestra cuando corresponda) -->
         <button
@@ -184,6 +206,67 @@
       border-radius: 18px;
       padding: 18px;
       box-shadow: 0 40px 80px rgba(0,0,0,0.20);
+    }
+
+    /* ✅ NUEVO (NO ROMPE): banner compacto arriba del card */
+    .cita-banner{
+      width: 100%;
+      border-radius: 14px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      text-align: left;
+    }
+    .cita-banner__top{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      justify-content: space-between;
+    }
+    .cita-badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background:#ffedd5;
+      border:1px solid #f59e0b;
+      font-weight:900;
+    }
+    .cita-title{
+      flex: 1;
+      font-weight: 900;
+      color:#9a3412;
+      font-size: 13px;
+      letter-spacing: .02em;
+    }
+    .cita-hour{
+      font-weight: 950;
+      color:#0f172a;
+      font-size: 14px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background:#ffffff;
+      border:1px solid #e5e7eb;
+      white-space:nowrap;
+    }
+    .cita-banner__bottom{
+      display:flex;
+      gap:8px;
+      margin-top: 6px;
+      font-size: 12px;
+      color:#475569;
+      font-weight: 700;
+    }
+    .cita-state{
+      color:#0f172a;
+      font-weight: 900;
+    }
+    .cita-delta{
+      color:#475569;
+      font-weight: 800;
     }
 
     @media (max-width: 1024px){
