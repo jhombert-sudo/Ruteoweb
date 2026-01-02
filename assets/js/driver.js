@@ -50,6 +50,13 @@ const hoyBox = document.getElementById("hoy-box");
 const listaPendientesChofer = document.getElementById("lista-pendientes-chofer");
 const listaDespachadosChofer = document.getElementById("lista-despachados-chofer");
 
+// ✅ NUEVO: QR PLEGABLE (NO ROMPE SI NO EXISTE)
+const btnToggleQR = document.getElementById("btnToggleQR");
+const qrContainer = document.getElementById("qr-container");
+
+// ✅ NUEVO: Mi horario (NO ROMPE SI NO EXISTE)
+const miHorarioBox = document.getElementById("mi-horario-box");
+
 /*************************************************
  * UTILIDAD FECHA LOCAL (CLAVE 🔑)
  *************************************************/
@@ -80,6 +87,33 @@ const deviceId = getDeviceId();
 let nombreChofer = null;
 let driverId = null;
 let tipoChofer = "NORMAL";
+
+/*************************************************
+ * QR PLEGABLE: helpers (NO ROMPE)
+ *************************************************/
+function setQRVisible_(visible) {
+  if (qrContainer) qrContainer.style.display = visible ? "block" : "none";
+  if (btnToggleQR) btnToggleQR.textContent = visible ? "Ocultar QR" : "Mostrar QR";
+}
+
+function enableQRToggle_() {
+  if (!btnToggleQR) return;
+
+  btnToggleQR.style.display = "block"; // aparece el botón cuando hay QR para mostrar
+  // si todavía no se seteó, dejamos oculto por defecto
+  if (qrContainer && (qrContainer.style.display === "" || qrContainer.style.display === "none")) {
+    setQRVisible_(false);
+  }
+
+  // evitar duplicar listeners si se llama varias veces
+  if (btnToggleQR.dataset.bound === "1") return;
+  btnToggleQR.dataset.bound = "1";
+
+  btnToggleQR.addEventListener("click", () => {
+    const visible = qrContainer && qrContainer.style.display !== "none";
+    setQRVisible_(!visible);
+  });
+}
 
 /*************************************************
  * CARGAR DROPDOWN DE CHOFERES + LOCK SI YA EXISTE
@@ -144,6 +178,8 @@ async function initChoferDropdown() {
 
     // ✅ Si ya tiene chofer asignado, vemos si ya fichó hoy y mostramos/ocultamos el bloque
     await actualizarVisibilidadListado();
+    // ✅ Si ya fichó hoy, también habilitamos el toggle (si existe QR renderizado luego)
+    hideQRUIUntilNeeded_();
     return;
   }
 
@@ -157,6 +193,7 @@ async function initChoferDropdown() {
       if (turnoInfo) turnoInfo.textContent = "";
       welcome.innerText = "Bienvenido";
       if (hoyBox) hoyBox.style.display = "none";
+      hideQRUIUntilNeeded_();
       return;
     }
 
@@ -171,7 +208,18 @@ async function initChoferDropdown() {
 
     // ✅ Aún no fichó => oculto
     if (hoyBox) hoyBox.style.display = "none";
+    hideQRUIUntilNeeded_();
   });
+}
+
+/*************************************************
+ * OCULTAR UI QR / mi horario hasta que haya fichaje
+ *************************************************/
+function hideQRUIUntilNeeded_() {
+  if (btnToggleQR) btnToggleQR.style.display = "none";
+  if (qrContainer) qrContainer.style.display = "none";
+  // miHorarioBox queda listo para futuro (si no lo usamos ahora no rompe)
+  if (miHorarioBox) miHorarioBox.style.display = "none";
 }
 
 /*************************************************
@@ -277,7 +325,7 @@ async function registrarLlegadaFirestore() {
 }
 
 /*************************************************
- * QR TEMPORAL (VISUAL)
+ * QR TEMPORAL (VISUAL) + ✅ QR PLEGABLE
  *************************************************/
 function mostrarQR(docId) {
   let contenedor = document.getElementById("qr-container");
@@ -302,8 +350,14 @@ function mostrarQR(docId) {
     </p>
   `;
 
+  // ✅ Activamos el botón plegable y dejamos el QR oculto por defecto
+  enableQRToggle_();
+  setQRVisible_(false);
+
   setTimeout(() => {
-    contenedor.remove();
+    // si se borra el contenedor, también escondemos el botón
+    if (contenedor) contenedor.remove();
+    if (btnToggleQR) btnToggleQR.style.display = "none";
   }, 2 * 60 * 60 * 1000);
 }
 
@@ -444,6 +498,7 @@ async function actualizarVisibilidadListado() {
 /*************************************************
  * INIT
  *************************************************/
+hideQRUIUntilNeeded_();
 initChoferDropdown();
 iniciarListadoHoyEnVivo();
 actualizarVisibilidadListado();
