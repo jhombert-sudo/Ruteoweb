@@ -35,6 +35,15 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 /*************************************************
+ * CONFIG (NO ROMPE)
+ *************************************************/
+// ✅ Colección donde Apps Script sube las citas
+const COLLECTION_CITAS = "citas_diarias";
+
+// ✅ Tolerancia para "A tiempo" (minutos tarde permitidos)
+const ON_TIME_GRACE_MIN = 5;
+
+/*************************************************
  * ELEMENTOS UI
  *************************************************/
 const btnFichar = document.getElementById("btnFichar");
@@ -87,6 +96,123 @@ const deviceId = getDeviceId();
 let nombreChofer = null;
 let driverId = null;
 let tipoChofer = "NORMAL";
+
+/*************************************************
+ * CITAS (HORARIO) – cache simple (NO ROMPE)
+ *************************************************/
+let citaHoy = null; // { hora_citada, tipo, ... } o null
+
+function parseHHMMToMinutes_(hhmm) {
+  const m = String(hhmm || "").match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const hh = Number(m[1]);
+  const mm = Number(m[2]);
+  if (Number.isNaN(hh) || Number.isNaN(mm)) return null;
+  return hh * 60 + mm;
+}
+
+function dateToMinutes_(d) {
+  return d.getHours() * 60 + d.getMinutes();
+}
+
+function diffLabel_(deltaMin) {
+  const abs = Math.abs(deltaMin);
+  if (abs === 1) return "1 min";
+  return `${abs} min`;
+}
+
+function calcPuntualidad_(horaCitadaHHMM, llegadaDate) {
+  const citaMin = parseHHMMToMinutes_(horaCitadaHHMM);
+  if (citaMin == null) return null;
+
+  const llegadaMin = dateToMinutes_(llegadaDate);
+  const delta = llegadaMin - citaMin; // + => tarde, - => antes
+
+  if (delta <= 0) {
+    // antes o justo
+    if (delta === 0) return { estado: "A TIEMPO", detalle: "Llegaste a tiempo ✅", delta };
+    return { estado: "ANTES", detalle: `Llegaste ${diffLabel_(delta)} antes ✅`, delta };
+  }
+
+  // tarde
+  if (delta <= ON_TIME_GRACE_MIN) {
+    return { estado: "A TIEMPO", detalle: `Llegaste ${diffLabel_(delta)} tarde, pero a tiempo ✅`, delta };
+  }
+
+  return { estado: "TARDE", detalle: `Llegaste ${diffLabel_(delta)} tarde ⚠️`, delta };
+}
+
+function renderMiHorario_(data, extraMsg) {
+  if (!miHorarioBox) return;
+
+  // data puede ser null
+  if (!data) {
+    miHorarioBox.style.display = "none";
+    miHorarioBox.innerHTML = "";
+    return;
+  }
+
+  const tipo = String(data.tipo || "").toUpperCase() || "NORMAL";
+  const hora = data.hora_citada || data.horaCitada || null;
+
+  const title = "🕘 Tu horario de hoy";
+  let mainLine = "";
+  let subLine = "";
+
+  if (tipo === "TURBO") {
+    mainLine = "🚀 TURBO (sin horario fijo)";
+    subLine = "Podés llegar cuando corresponda.";
+  } else if (hora) {
+    mainLine = `⏰ Citado: <strong>${hora}</strong>`;
+    subLine = "Al fichar te digo si llegaste a tiempo.";
+  } else {
+    mainLine = "⏰ Sin horario cargado";
+    subLine = "Avisá al supervisor si falta tu cita.";
+  }
+
+  const extra = extraMsg
+    ? `<div style="margin-top:8px;font-size:12px;color:#0f172a;font-weight:900;">${extraMsg}</div>`
+    : "";
+
+  miHorarioBox.style.display = "block";
+  miHorarioBox.innerHTML = `
+    <div style="
+      background:#fffbeb;
+      border:1px solid #f59e0b;
+      border-radius:14px;
+      padding:10px 12px;
+    ">
+      <div style="font-size:12px;color:#9a3412;font-weight:900;margin-bottom:4px;">${title}</div>
+      <div style="font-size:14px;color:#0f172a;font-weight:800;">${mainLine}</div>
+      <div style="font-size:12px;color:#64748b;margin-top:2px;">${subLine}</div>
+      ${extra}
+    </div>
+  `;
+}
+
+async function fetchCitaHoy_() {
+  if (!driverId) return null;
+
+  const hoy = hoyISO();
+  const docId = `${hoy}_${driverId}`;
+
+  try {
+    const ref = doc(db, COLLECTION_CITAS, docId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return null;
+    return snap.data();
+  } catch (e) {
+    console.warn("No pude leer cita de hoy:", e);
+    return null;
+  }
+}
+
+async function cargarMiHorarioDelDia_(extraMsg) {
+  if (!miHorarioBox || !driverId) return;
+
+  citaHoy = await fetchCitaHoy_();
+  renderMiHorario_(citaHoy, extraMsg || "");
+}
 
 /*************************************************
  * QR PLEGABLE: helpers (NO ROMPE)
@@ -176,10 +302,16 @@ async function initChoferDropdown() {
       turnoInfo.textContent = (tipoChofer === "TURBO") ? "🚀 TURBO (sin horario fijo)" : "";
     }
 
+    // ✅ Cargar y mostrar horario personal (si existe)
+    await cargarMiHorarioDelDia_();
+
     // ✅ Si ya tiene chofer asignado, vemos si ya fichó hoy y mostramos/ocultamos el bloque
     await actualizarVisibilidadListado();
-    // ✅ Si ya fichó hoy, también habilitamos el toggle (si existe QR renderizado luego)
+
+    // ✅ UI QR (oculto hasta que haya fichaje)
     hideQRUIUntilNeeded_();
+
+    // ✅ si ya fichó hoy, dejamos el horario visible igual (y si re-ficha, mostrará QR)
     return;
   }
 
@@ -194,6 +326,7 @@ async function initChoferDropdown() {
       welcome.innerText = "Bienvenido";
       if (hoyBox) hoyBox.style.display = "none";
       hideQRUIUntilNeeded_();
+      renderMiHorario_(null);
       return;
     }
 
@@ -206,6 +339,9 @@ async function initChoferDropdown() {
       turnoInfo.textContent = (tipoChofer === "TURBO") ? "🚀 TURBO (sin horario fijo)" : "";
     }
 
+    // ✅ Mostrar horario personal del día (si existe)
+    await cargarMiHorarioDelDia_();
+
     // ✅ Aún no fichó => oculto
     if (hoyBox) hoyBox.style.display = "none";
     hideQRUIUntilNeeded_();
@@ -214,12 +350,11 @@ async function initChoferDropdown() {
 
 /*************************************************
  * OCULTAR UI QR / mi horario hasta que haya fichaje
+ * (miHorarioBox: ahora lo usamos, así que NO lo escondemos acá)
  *************************************************/
 function hideQRUIUntilNeeded_() {
   if (btnToggleQR) btnToggleQR.style.display = "none";
   if (qrContainer) qrContainer.style.display = "none";
-  // miHorarioBox queda listo para futuro (si no lo usamos ahora no rompe)
-  if (miHorarioBox) miHorarioBox.style.display = "none";
 }
 
 /*************************************************
@@ -291,9 +426,29 @@ async function registrarLlegadaFirestore() {
   const ref = doc(db, "fichajes_diarios", docId);
   const snap = await getDoc(ref);
 
+  // ✅ Traemos cita (si existe) para mensaje + box
+  const cita = citaHoy || (await fetchCitaHoy_());
+
   // ❌ Ya fichó hoy
   if (snap.exists()) {
-    alert("⚠️ Ya estás registrado hoy.");
+    const llegada = getLlegadaDate({ ...snap.data() });
+    const horaCitada = cita?.hora_citada || null;
+
+    let msgExtra = "";
+    if (cita?.tipo === "TURBO") {
+      msgExtra = "🚀 TURBO (sin horario fijo)";
+    } else if (horaCitada && llegada && llegada.getTime() > 0) {
+      const p = calcPuntualidad_(horaCitada, llegada);
+      msgExtra = p ? p.detalle : "";
+    } else if (horaCitada) {
+      msgExtra = `⏰ Citado: ${horaCitada}`;
+    }
+
+    alert(`⚠️ Ya estás registrado hoy.\n${msgExtra}`.trim());
+
+    // Mostrar box actualizado
+    await cargarMiHorarioDelDia_(msgExtra);
+
     mostrarQR(docId);
     await actualizarVisibilidadListado(); // ✅ muestra el bloque si corresponde
     return;
@@ -317,7 +472,33 @@ async function registrarLlegadaFirestore() {
     createdAt: serverTimestamp()
   });
 
-  alert("Llegada registrada correctamente ✅");
+  // ✅ Leemos de nuevo para obtener horaLlegada real
+  let llegadaDate = new Date();
+  try {
+    const snap2 = await getDoc(ref);
+    if (snap2.exists()) {
+      const d = snap2.data();
+      llegadaDate = d.horaLlegada?.toDate?.() || d.createdAt?.toDate?.() || llegadaDate;
+    }
+  } catch (_) {}
+
+  const horaCitada = cita?.hora_citada || null;
+
+  let msgExtra = "";
+  if (cita?.tipo === "TURBO") {
+    msgExtra = "🚀 TURBO (sin horario fijo)";
+  } else if (horaCitada) {
+    const p = calcPuntualidad_(horaCitada, llegadaDate);
+    msgExtra = p ? `${p.detalle}\n⏰ Citado: ${horaCitada}` : `⏰ Citado: ${horaCitada}`;
+  } else {
+    msgExtra = "⏰ No encuentro tu horario de hoy (citas_diarias).";
+  }
+
+  alert(`Llegada registrada correctamente ✅\n${msgExtra}`.trim());
+
+  // ✅ Mostrar box de horario compacto con el mensaje
+  await cargarMiHorarioDelDia_(msgExtra.replace(/\n/g, " • "));
+
   mostrarQR(docId);
 
   // ✅ Ahora sí: aparece el listado
