@@ -31,6 +31,41 @@
     <div class="icons">🔔 ✉️ ⚙️</div>
   </header>
 
+  <!-- ✅ PWA: MODAL INSTALAR (NUEVO) -->
+  <div id="pwa-install-modal" style="display:none;" aria-hidden="true">
+    <div class="pwa-modal-backdrop"></div>
+
+    <div class="pwa-modal" role="dialog" aria-modal="true" aria-labelledby="pwa-title">
+      <h3 id="pwa-title" class="pwa-title">Instalá la app</h3>
+
+      <p class="pwa-desc">
+        Instalá la app para entrar más rápido y recibir avisos importantes.
+      </p>
+
+      <!-- ✅ Instrucciones iPhone (se muestran solo en iOS) -->
+      <div id="pwa-ios-steps" class="pwa-ios-steps" style="display:none;">
+        <ol style="margin:10px 0 0; padding-left:18px;">
+          <li>Tocá <strong>Compartir</strong> (cuadradito con flecha ↑).</li>
+          <li>Elegí <strong>“Agregar a pantalla de inicio”</strong>.</li>
+          <li>Confirmá con <strong>“Agregar”</strong>.</li>
+        </ol>
+        <p style="margin:10px 0 0; font-size:12px; color:#64748b;">
+          Luego abrí la app desde el ícono.
+        </p>
+      </div>
+
+      <div class="pwa-actions">
+        <button id="pwa-btn-later" type="button" class="pwa-btn pwa-btn-secondary">Ahora no</button>
+
+        <!-- Android -->
+        <button id="pwa-btn-install" type="button" class="pwa-btn pwa-btn-primary" disabled>Instalar</button>
+
+        <!-- iPhone -->
+        <button id="pwa-btn-how" type="button" class="pwa-btn pwa-btn-primary" style="display:none;">Cómo instalar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ================= FICHAJE CHOFER ================= -->
   <main class="wrapper">
 
@@ -305,6 +340,100 @@
             console.warn("Service Worker no se pudo registrar:", err);
           });
       });
+    })();
+  </script>
+
+  <!-- ✅ PWA: MODAL INSTALAR (AL ENTRAR) - ANDROID PROMPT / iPHONE INSTRUCCIONES -->
+  <script>
+    (function () {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("panel") === "1") return; // no molestar al panel
+
+      const modal = document.getElementById("pwa-install-modal");
+      const btnLater = document.getElementById("pwa-btn-later");
+      const btnInstall = document.getElementById("pwa-btn-install");
+      const btnHow = document.getElementById("pwa-btn-how");
+      const iosSteps = document.getElementById("pwa-ios-steps");
+
+      if (!modal || !btnLater || !btnInstall || !btnHow) return;
+
+      function isInstalled() {
+        const standaloneMatch = window.matchMedia && window.matchMedia("(display-mode: standalone)").matches;
+        const iosStandalone = ("standalone" in navigator) && navigator.standalone === true;
+        return !!(standaloneMatch || iosStandalone);
+      }
+
+      function isIOS() {
+        return /iphone|ipad|ipod/i.test(navigator.userAgent);
+      }
+
+      function isAndroid() {
+        return /android/i.test(navigator.userAgent);
+      }
+
+      function showModal() {
+        modal.style.display = "block";
+        modal.setAttribute("aria-hidden", "false");
+      }
+
+      function hideModal() {
+        modal.style.display = "none";
+        modal.setAttribute("aria-hidden", "true");
+      }
+
+      // Si ya está instalada, no mostramos nada
+      if (isInstalled()) return;
+
+      // iPhone: mostramos modal + botón "Cómo instalar"
+      if (isIOS()) {
+        btnInstall.style.display = "none";
+        btnHow.style.display = "inline-block";
+        if (iosSteps) iosSteps.style.display = "none"; // se muestra al tocar "Cómo instalar"
+        showModal();
+
+        btnHow.addEventListener("click", function () {
+          if (iosSteps) iosSteps.style.display = "block";
+        });
+
+        btnLater.addEventListener("click", hideModal);
+        modal.querySelector(".pwa-modal-backdrop").addEventListener("click", hideModal);
+        return;
+      }
+
+      // Android: mostramos modal al entrar, y habilitamos el prompt cuando el navegador lo permita
+      if (isAndroid()) {
+        let deferredPrompt = null;
+
+        // Modal visible al entrar
+        btnHow.style.display = "none";
+        btnInstall.style.display = "inline-block";
+        btnInstall.disabled = true;
+        showModal();
+
+        // Capturar evento instalable
+        window.addEventListener("beforeinstallprompt", function (e) {
+          e.preventDefault();
+          deferredPrompt = e;
+          btnInstall.disabled = false;
+        });
+
+        btnInstall.addEventListener("click", async function () {
+          if (!deferredPrompt) return;
+          deferredPrompt.prompt();
+          try {
+            await deferredPrompt.userChoice;
+          } catch (_) {}
+          deferredPrompt = null;
+          hideModal();
+        });
+
+        btnLater.addEventListener("click", hideModal);
+        modal.querySelector(".pwa-modal-backdrop").addEventListener("click", hideModal);
+        return;
+      }
+
+      // Otros (desktop, etc): no mostramos modal para no molestar
+      // (si querés que también aparezca en desktop, lo activamos después)
     })();
   </script>
 
