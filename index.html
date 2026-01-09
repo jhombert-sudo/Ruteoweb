@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Turnero De Ultima Milla</title>
 
-  <!-- ✅ PWA: MANIFEST + COLOR (NUEVO) -->
-  <link rel="manifest" href="/manifest.json">
+  <!-- ✅ PWA: MANIFEST + COLOR (AJUSTADO PARA GITHUB PAGES /Ruteoweb/) -->
+  <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#3933EB">
 
-  <!-- ✅ PWA (iOS): ICONO + MODO APP (NUEVO) -->
-  <link rel="apple-touch-icon" href="/img/logo.jpeg">
+  <!-- ✅ PWA (iOS): ICONO + MODO APP (AJUSTADO PARA GITHUB PAGES /Ruteoweb/) -->
+  <link rel="apple-touch-icon" href="./img/logo.jpeg">
   <meta name="apple-mobile-web-app-capable" content="yes">
 
   <!-- FAVICON -->
@@ -291,13 +291,13 @@
   <script type="module" src="assets/js/driver.js"></script>
   <script type="module" src="assets/js/panel.js"></script>
 
-  <!-- ✅ PWA: REGISTRO SERVICE WORKER (NUEVO) -->
+  <!-- ✅ PWA: REGISTRO SERVICE WORKER (AJUSTADO PARA GITHUB PAGES /Ruteoweb/) -->
   <script>
     (function () {
       if (!("serviceWorker" in navigator)) return;
 
       window.addEventListener("load", function () {
-        navigator.serviceWorker.register("/service-worker.js")
+        navigator.serviceWorker.register("./service-worker.js")
           .then(function () {
             // ok
           })
